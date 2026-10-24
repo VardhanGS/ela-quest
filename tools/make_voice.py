@@ -2,7 +2,7 @@
 """Pre-record every line the app speaks with the natural voice, packed into one audio bundle per skill.
 
 Steps:  node tools/enumerate_speech.js            -> tools/speech-lines.json
-        tools/.venv/bin/python tools/make_voice.py -> voice/<bundle>.m4a + data/voice-clips.js
+        tools/.venv/bin/python tools/make_voice.py -> voice/<bundle>.mp4 + data/voice-clips.js
 Clips are cached in tools/.voice-cache/, so re-runs only synthesize new lines.
 """
 import json, os, re, subprocess, sys, time
@@ -59,7 +59,7 @@ def main():
         audio = np.concatenate(parts)
         wav = os.path.join(CACHE, f'_{b}.wav')
         sf.write(wav, audio, SR, subtype='PCM_16')
-        subprocess.run(['ffmpeg', '-y', '-loglevel', 'error', '-i', wav, '-ac', '1', '-af', 'loudnorm=I=-16:TP=-1.5:LRA=11', '-ar', '24000', '-c:a', 'aac', '-b:a', '32k', '-movflags', '+faststart', os.path.join(OUT, f'{b}.m4a')], check=True)
+        subprocess.run(['ffmpeg', '-y', '-loglevel', 'error', '-i', wav, '-ac', '1', '-af', 'loudnorm=I=-16:TP=-1.5:LRA=11', '-ar', '24000', '-c:a', 'aac', '-b:a', '32k', '-movflags', '+faststart', os.path.join(OUT, f'{b}.mp4')], check=True)
         os.remove(wav)
         print(f'  bundle {b}: {len(audio) / SR / 60:.1f} min', flush=True)
     with open(os.path.join(ROOT, 'data', 'voice-clips.js'), 'w') as f:

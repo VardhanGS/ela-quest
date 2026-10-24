@@ -45,7 +45,7 @@ const Voice = (() => {
   };
 
   // ---- playback ----
-  // Clips are packed into one audio bundle per skill (voice/<bundle>.m4a). A bundle is fetched and decoded
+  // Clips are packed into one audio bundle per skill (voice/<bundle>.mp4). A bundle is fetched and decoded
   // once; each line is cut out as a small WAV so it can play at any speed without changing pitch.
   const clips = typeof VOICE_CLIPS !== 'undefined' ? VOICE_CLIPS : {};
   const bundles = typeof VOICE_BUNDLES !== 'undefined' ? VOICE_BUNDLES : [];
@@ -54,7 +54,7 @@ const Voice = (() => {
 
   function loadBundle(bi) {
     if (!buffers[bi]) {
-      buffers[bi] = fetch(`voice/${bundles[bi]}.m4a`)
+      buffers[bi] = fetch(`voice/${bundles[bi]}.mp4`)
         .then((r) => { if (!r.ok) throw new Error('missing'); return r.arrayBuffer(); })
         .then((ab) => {
           const AC = window.AudioContext || window.webkitAudioContext;

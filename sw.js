@@ -1,4 +1,4 @@
-const CACHE = "elaquest-v3";
+const CACHE = "elaquest-v4";
 const ASSETS = [
   "./",
   "./index.html",
@@ -36,7 +36,8 @@ self.addEventListener("activate", (e) => {
 self.addEventListener("fetch", (e) => {
   if (e.request.method !== "GET") return;
   // Let the browser stream videos directly (range requests); don't cache them.
-  if (new URL(e.request.url).pathname.endsWith(".mp4")) return;
+  const path = new URL(e.request.url).pathname;
+  if (path.includes("/videos/") && path.endsWith(".mp4")) return;
   e.respondWith(
     fetch(e.request)
       .then((res) => {
