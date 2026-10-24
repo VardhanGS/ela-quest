@@ -99,6 +99,7 @@ const Cloud = (() => {
     // A reset on either device wins over anything recorded before it.
     if ((a.resetAt || 0) !== (b.resetAt || 0)) return (a.resetAt || 0) > (b.resetAt || 0) ? a : b;
     const m = { ...b, ...a };
+    m.track = a.track || b.track;
     ['xp', 'quests', 'perfects', 'fixed'].forEach((k) => { m[k] = max(a[k], b[k]); });
     m.best = { ...b.best }; Object.entries(a.best || {}).forEach(([k, v]) => { m.best[k] = max(m.best[k], v); });
     m.plays = { ...b.plays }; Object.entries(a.plays || {}).forEach(([k, v]) => { m.plays[k] = max(m.plays[k], v); });

@@ -27,6 +27,7 @@
     store.set('elaq_active', id);
     P = Object.assign(blankData(), store.get('elaq_p_' + id, {}));
     lastDraft = JSON.stringify(P.draft);
+    applyTrack(trackOf());
   }
   let lastDraft = null;
   function save() {
@@ -41,6 +42,15 @@
   const me = () => profiles.find((p) => p.id === activeId);
 
   // ---------- content helpers ----------
+  // Grade tracks: each player follows one. Level names and subjects come from the track.
+  const TRACKS = {
+    g2: { id: 'g2', label: 'Grade 2 → 3', short: 'Grade 2', ready: 'Grade 3', levels: LEVEL_NAMES.map((l) => ({ ...l })) },
+    g8: { id: 'g8', label: 'Grade 8 → 9 · NJ', short: 'Grade 8', ready: 'Grade 9', levels: [{ short: 'Core', grade: 'Grade 8', long: 'Grade 8 Core' }, { short: 'Advanced', grade: 'Grade 8', long: 'Grade 8 Advanced' }, { short: 'Grade 9 Ready', grade: 'Grade 9', long: 'Grade 9 Ready' }] },
+  };
+  const trackOf = () => (P && P.track && TRACKS[P.track] ? P.track : 'g2');
+  const TR = () => TRACKS[trackOf()];
+  function applyTrack(t) { LEVEL_NAMES.splice(0, LEVEL_NAMES.length, ...TRACKS[t || 'g2'].levels); }
+  const SUBJ = () => SUBJECTS.filter((s) => s.track === trackOf());
   const subj = (id) => SUBJECTS.find((s) => s.id === id);
   const skillOf = (sid, kid) => subj(sid).skills.find((k) => k.id === kid);
   const key = (sid, kid, l) => `${sid}.${kid}.${l}`;
@@ -56,12 +66,12 @@
   }
   function readiness() {
     let n = 0, done = 0;
-    SUBJECTS.forEach((s) => s.skills.forEach((k) => { n++; if (passed(s.id, k.id, 2)) done++; }));
+    SUBJ().forEach((s) => s.skills.forEach((k) => { n++; if (passed(s.id, k.id, 2)) done++; }));
     return { n, done, pct: Math.round((done / n) * 100) };
   }
   function nextUp() {
     const out = [];
-    SUBJECTS.forEach((s) => {
+    SUBJ().forEach((s) => {
       for (const k of s.skills) {
         const l = [0, 1, 2].find((x) => unlocked(s.id, k.id, x) && !passed(s.id, k.id, x));
         if (l != null) { out.push({ s, k, l }); break; }
@@ -87,14 +97,16 @@
     { id: 'writer5', icon: '📚', name: 'Bookshelf', desc: 'Publish 5 pieces of writing.', test: () => P.writings.length >= 5 },
     { id: 'movie', icon: '🎬', name: 'Movie Star', desc: 'Watch 5 video lessons.', test: () => Object.keys(P.watched || {}).length >= 5 },
     { id: 'xp1000', icon: '⚡', name: '1,000 XP', desc: 'Earn 1,000 XP.', test: () => P.xp >= 1000 },
-    { id: 'bee50', icon: '🐝', name: 'Busy Bee', desc: 'Master 50 spelling words.', test: () => Object.values(P.words || {}).filter((w) => w.mastered).length >= 50 },
-    { id: 'onebee', icon: '🏆', name: 'One Bee Ready', desc: 'Master every word on the One Bee list.', test: () => subj('spelling').skills.filter((k) => k.id.startsWith('onebee')).every((k) => masteredIn(k.words) === k.words.length) },
-    ...['phonics', 'spelling', 'grammar', 'reading', 'vocab', 'writing'].map((sid) => ({ id: 'champ_' + sid, icon: { phonics: '🔤', spelling: '🐝', grammar: '✏️', reading: '📚', vocab: '💬', writing: '🖍️' }[sid], name: `${subj(sid).name} Champ`, desc: `Pass every Grade 3 Challenge in ${subj(sid).name}.`, test: () => subj(sid).skills.every((k) => passed(sid, k.id, 2)) })),
-    { id: 'grade3', icon: '🎓', name: 'Ready for Grade 3', desc: 'Pass every Grade 3 Challenge.', test: () => readiness().done === readiness().n },
+    { id: 'bee50', track: 'g2', icon: '🐝', name: 'Busy Bee', desc: 'Master 50 spelling words.', test: () => Object.values(P.words || {}).filter((w) => w.mastered).length >= 50 },
+    { id: 'onebee', track: 'g2', icon: '🏆', name: 'One Bee Ready', desc: 'Master every word on the One Bee list.', test: () => subj('spelling').skills.filter((k) => k.id.startsWith('onebee')).every((k) => masteredIn(k.words) === k.words.length) },
+    ...SUBJECTS.map((x) => x.id).map((sid) => ({ id: 'champ_' + sid, track: subj(sid).track, icon: subj(sid).icon, name: `${subj(sid).name} Champ`, desc: `Pass every Grade 3 Challenge in ${subj(sid).name}.`, test: () => subj(sid).skills.every((k) => passed(sid, k.id, 2)) })),
+    { id: 'grade3', track: 'g2', icon: '🎓', name: 'Ready for Grade 3', desc: 'Pass every Grade 3 Challenge.', test: () => readiness().done === readiness().n },
+    { id: 'grade9', track: 'g8', icon: '🎓', name: 'Ready for Grade 9', desc: 'Pass every Grade 9 Ready level.', test: () => readiness().done === readiness().n },
   ];
+  const myBadges = () => BADGES.filter((b) => !b.track || b.track === trackOf());
   function checkBadges() {
     const earned = [];
-    BADGES.forEach((b) => { if (!P.badges[b.id] && b.test()) { P.badges[b.id] = dayKey(); earned.push(b); } });
+    myBadges().forEach((b) => { if (!P.badges[b.id] && b.test()) { P.badges[b.id] = dayKey(); earned.push(b); } });
     return earned;
   }
 
@@ -156,7 +168,7 @@
     app.innerHTML = `
       ${focus ? '' : topbar()}
       <main class="main ${focus ? 'focus' : ''}">${body}</main>
-      ${focus ? '' : `<nav class="tabbar" aria-label="Main">${NAV.map(([id, ic, label]) => `<button class="tab ${active === id ? 'on' : ''}" data-act="nav" data-to="${id}"><span class="tab-ic" aria-hidden="true">${ic}</span><span>${label}</span></button>`).join('')}</nav>`}
+      ${focus ? '' : `<nav class="tabbar" aria-label="Main">${NAV.filter(([id]) => id !== 'videos' || VIDS().length).map(([id, ic, label]) => `<button class="tab ${active === id ? 'on' : ''}" data-act="nav" data-to="${id}"><span class="tab-ic" aria-hidden="true">${ic}</span><span>${label}</span></button>`).join('')}</nav>`}
       ${modalHTML()}`;
     AFTER[view.name] && AFTER[view.name]();
     SFX.syncMusic(['quiz', 'example', 'video'].includes(view.name));
@@ -168,7 +180,7 @@
     const p = me();
     const into = P.xp % XP_PER;
     return `<header class="topbar">
-      <button class="brand" data-act="nav" data-to="home" aria-label="ELA Quest home"><span class="brand-word">ELA Quest</span><span class="brand-sub">Grade 2 → 3</span></button>
+      <button class="brand" data-act="nav" data-to="home" aria-label="ELA Quest home"><span class="brand-word">ELA Quest</span><span class="brand-sub">${esc(TR().label)}</span></button>
       <div class="top-right">
         ${p.cloud ? `<span class="pill sync" id="syncPill" title="${esc(SYNC_LABEL[sync.state])}">${SYNC_ICON[sync.state]}</span>` : ''}
         <span class="pill streak" title="Days in a row">🔥 <b>${streakNow()}</b></span>
@@ -190,6 +202,8 @@
         <input id="newName" class="input" maxlength="16" placeholder="Type your name" value="${esc(view.typed || '')}" autocomplete="off">
         <span class="lbl">Pick a buddy</span>
         <div class="avatars">${AVATARS.map((a) => `<button class="av-btn ${a === pick ? 'on' : ''}" data-act="pickAvatar" data-a="${a}" aria-label="Avatar ${a}">${a}</button>`).join('')}</div>
+        <span class="lbl">Grade</span>
+        <div class="seg">${Object.values(TRACKS).map((t) => `<button class="${(view.track || 'g2') === t.id ? 'on' : ''}" data-act="pickTrack" data-t="${t.id}">${esc(t.label)}</button>`).join('')}</div>
         <button class="btn primary big" data-act="createPlayer">Start my quest</button>
         ${profiles.length ? '<button class="btn ghost" data-act="nav" data-to="players">Back to players</button>' : ''}
       </section>
@@ -229,7 +243,7 @@
 
         <h2 class="sec">Choose a subject</h2>
         <section class="subjects">
-          ${SUBJECTS.map((s) => {
+          ${SUBJ().map((s) => {
             const m = mastery(s);
             return `<button class="subject s-${s.color}" data-act="openSubject" data-s="${s.id}">
               <span class="subject-ic" aria-hidden="true">${s.icon}</span>
@@ -258,10 +272,10 @@
             ${up.length ? `<ul class="uplist">${up.map(({ s, k, l }) => `<li><button class="up s-${s.color}" data-act="start" data-s="${s.id}" data-k="${k.id}" data-l="${l}"><span class="up-ic">${k.icon}</span><span class="up-txt"><b>${k.name}</b><small>${LEVEL_NAMES[l].long} · ${esc(k.levels[l].title)}</small></span><span class="go">Go</span></button></li>`).join('')}</ul>` : '<p class="muted">You have passed every level. Amazing!</p>'}
           </div>
           <div class="card">
-            <h2>Grade 3 readiness</h2>
-            <div class="ready"><span class="ready-num">${r.pct}%</span><span class="muted">${r.done} of ${r.n} Grade 3 Challenges passed</span></div>
+            <h2>${TR().ready} readiness</h2>
+            <div class="ready"><span class="ready-num">${r.pct}%</span><span class="muted">${r.done} of ${r.n} ${LEVEL_NAMES[2].long} levels passed</span></div>
             <div class="meter big"><i style="width:${r.pct}%"></i></div>
-            <p class="fine">Pass a level with 70% or more to unlock the next one. Level 3 in every skill is Grade 3 work.</p>
+            <p class="fine">Pass a level with 70% or more to unlock the next one. Level 3 in every skill is ${TR().ready} work.</p>
           </div>
         </section>`;
     },
@@ -274,7 +288,7 @@
           <span class="sub-ic">${s.icon}</span>
           <div><h1>${s.name}</h1><p>${s.blurb} · ${mastery(s)}% mastered</p></div>
         </section>
-        <div class="legend"><span><i class="lv lv0"></i>Level 1 · Grade 2 Starter</span><span><i class="lv lv1"></i>Level 2 · Grade 2 Star</span><span><i class="lv lv2"></i>Level 3 · Grade 3 Challenge</span></div>
+        <div class="legend">${LEVEL_NAMES.map((n, i) => `<span><i class="lv lv${i}"></i>Level ${i + 1} · ${n.long}</span>`).join('')}</div>
         <section class="skills">
           ${s.skills.map((k) => `
             <article class="skill card">
@@ -330,7 +344,7 @@
 
   function buildMix() {
     const bestPer = {};
-    SUBJECTS.forEach((s) => s.skills.forEach((k) => {
+    SUBJ().forEach((s) => s.skills.forEach((k) => {
       if (k.passage) return;
       k.levels.forEach((_, l) => { if (unlocked(s.id, k.id, l)) bestPer[s.id + k.id] = [s, k, l]; });
     }));
@@ -658,7 +672,7 @@
 
   // ---------- "Watch first" examples ----------
   let demoToken = 0;
-  const VIDS = () => (typeof VIDEOS !== 'undefined' ? VIDEOS : []);
+  const VIDS = () => (typeof VIDEOS !== 'undefined' ? VIDEOS : []).filter((v) => (v.track || 'g2') === trackOf());
   const lessonOf = (k, l) => (typeof LESSONS !== 'undefined' ? LESSONS[`${k}.${l}`] : null);
   const wait = (ms) => new Promise((r) => setTimeout(r, ms));
   const fmtSecs = (n) => `${Math.floor(n / 60)}:${String(Math.round(n) % 60).padStart(2, '0')}`;
@@ -847,7 +861,7 @@
     const maxQ = Math.max(8, ...days.map((d) => d.q));
     const weekQ = days.reduce((a, d) => a + d.q, 0), weekC = days.reduce((a, d) => a + d.correct, 0);
     const played = [];
-    SUBJECTS.forEach((s) => s.skills.forEach((k) => k.levels.forEach((L, l) => { const b = best(s.id, k.id, l); if (b != null) played.push({ s, k, l, b }); })));
+    SUBJ().forEach((s) => s.skills.forEach((k) => k.levels.forEach((L, l) => { const b = best(s.id, k.id, l); if (b != null) played.push({ s, k, l, b }); })));
     const weak = played.filter((x) => x.b < 70).sort((a, b) => a.b - b.b).slice(0, 5);
     const strong = played.filter((x) => x.b >= 90).sort((a, b) => b.l - a.l || b.b - a.b).slice(0, 5);
     return `
@@ -856,7 +870,7 @@
         <div class="stat"><b>${P.xp}</b><span>Total XP</span></div>
         <div class="stat"><b>${P.quests}</b><span>Quests done</span></div>
         <div class="stat"><b>${streakNow()}</b><span>Day streak</span></div>
-        <div class="stat"><b>${r.pct}%</b><span>Grade 3 ready</span></div>
+        <div class="stat"><b>${r.pct}%</b><span>${TR().ready} ready</span></div>
       </section>
 
       <section class="card">
@@ -873,7 +887,7 @@
       <section class="card">
         <h2>Skill map</h2>
         <p class="muted">Each box is one level. Stars show the best score. Codes are the Common Core standards each level practices.</p>
-        <div class="map">${SUBJECTS.map((s) => `
+        <div class="map">${SUBJ().map((s) => `
           <div class="map-sub s-${s.color}">
             <h3>${s.icon} ${s.name} <small>${mastery(s)}%</small></h3>
             ${s.skills.map((k) => `<div class="map-row"><span class="map-name">${k.name}</span>${k.levels.map((L, l) => { const b = best(s.id, k.id, l); const st = starsFor(b); return `<button class="cell c${st} ${unlocked(s.id, k.id, l) ? '' : 'locked'}" ${readOnly ? 'disabled' : 'data-act="start"'} data-s="${s.id}" data-k="${k.id}" data-l="${l}" title="${LEVEL_NAMES[l].long}: ${esc(L.title)} (${L.std})">${b == null ? (unlocked(s.id, k.id, l) ? '–' : '🔒') : '★'.repeat(st) || b + '%'}</button>`; }).join('')}</div>`).join('')}
@@ -881,8 +895,8 @@
       </section>
 
       <section class="card">
-        <h2>Badges <small class="muted">${Object.keys(P.badges).length} of ${BADGES.length}</small></h2>
-        <div class="badges">${BADGES.map((b) => `<div class="badge ${P.badges[b.id] ? 'on' : ''}"><span>${b.icon}</span><b>${b.name}</b><small>${b.desc}</small></div>`).join('')}</div>
+        <h2>Badges <small class="muted">${myBadges().filter((b) => P.badges[b.id]).length} of ${myBadges().length}</small></h2>
+        <div class="badges">${myBadges().map((b) => `<div class="badge ${P.badges[b.id] ? 'on' : ''}"><span>${b.icon}</span><b>${b.name}</b><small>${b.desc}</small></div>`).join('')}</div>
       </section>`;
   }
 
@@ -913,6 +927,11 @@
         <label class="toggle"><input type="checkbox" id="setExVoice" data-set="narrateExamples" ${settings.narrateExamples ? 'checked' : ''}><span>Read the lesson and example aloud</span></label>
       </section>
       <section class="card stack">
+        <h2>Grade</h2>
+        <p class="muted">${esc(me().name)} is on the ${esc(TR().label)} track. Changing it switches subjects; progress on each track is kept.</p>
+        <div class="seg">${Object.values(TRACKS).map((t) => `<button class="${trackOf() === t.id ? 'on' : ''}" data-act="setTrack" data-t="${t.id}">${esc(t.label)}</button>`).join('')}</div>
+      </section>
+      <section class="card stack">
         <h2>Daily goal</h2>
         <div class="seg">${[1, 2, 3, 5].map((n) => `<button class="${settings.dailyGoal === n ? 'on' : ''}" data-act="goal" data-n="${n}">${n} quest${n > 1 ? 's' : ''}</button>`).join('')}</div>
       </section>
@@ -933,7 +952,7 @@
     const row = (p) => {
       const d = store.get('elaq_p_' + p.id, {});
       return `<li class="${p.id === activeId ? 'on' : ''}">
-        <button class="player" data-act="switchPlayer" data-id="${p.id}"><span class="av">${p.avatar}</span><span><b>${esc(p.name)}</b><small>${d.xp || 0} XP · ${d.quests || 0} quests${p.cloud ? ' · 🔒 PIN' : ''}</small></span>${p.id === activeId ? '<span class="tag">Playing</span>' : ''}</button>
+        <button class="player" data-act="switchPlayer" data-id="${p.id}"><span class="av">${p.avatar}</span><span><b>${esc(p.name)}</b><small>${TRACKS[d.track || 'g2'].short} · ${d.xp || 0} XP · ${d.quests || 0} quests${p.cloud ? ' · 🔒 PIN' : ''}</small></span>${p.id === activeId ? '<span class="tag">Playing</span>' : ''}</button>
         ${p.cloud ? '' : `<button class="icon-btn" data-act="askDeletePlayer" data-id="${p.id}" aria-label="Delete ${esc(p.name)}">🗑️</button>`}
       </li>`;
     };
@@ -960,6 +979,8 @@
 
   // ---------- writing studio ----------
   const typeOf = (id) => STUDIO.types.find((t) => t.id === id);
+  const studioTypes = () => STUDIO.types.filter((t) => (t.track || 'g2') === trackOf());
+  const goalsFor = (t) => t.goals || STUDIO.goals;
 
   function screenStudio() {
     return `
@@ -967,7 +988,7 @@
       <p class="lead">Plan it, write it, check it, publish it. Every piece you publish goes on your bookshelf.</p>
       ${P.draft ? `<section class="card draft-card"><div><span class="kind">Draft in progress</span><h2>${typeOf(P.draft.type).icon} ${esc(P.draft.prompt)}</h2><p class="muted">${typeOf(P.draft.type).name} · ${LEVEL_NAMES[P.draft.lvl].long} · ${wordCount(P.draft.text)} words</p></div><div class="row"><button class="btn primary" data-act="resumeDraft">Keep writing</button><button class="btn ghost" data-act="askDiscard">Discard</button></div></section>` : ''}
       <h2 class="sec">Start something new</h2>
-      <section class="types">${STUDIO.types.map((t) => `<button class="type-card" data-act="newWriting" data-t="${t.id}"><span class="type-ic">${t.icon}</span><b>${t.name}</b><span>${t.blurb}</span><small class="std">${t.std}</small></button>`).join('')}</section>
+      <section class="types">${studioTypes().map((t) => `<button class="type-card" data-act="newWriting" data-t="${t.id}"><span class="type-ic">${t.icon}</span><b>${t.name}</b><span>${t.blurb}</span><small class="std">${t.std}</small></button>`).join('')}</section>
       <h2 class="sec">My bookshelf</h2>
       ${P.writings.length ? `<section class="shelf">${P.writings.map((w, i) => `<button class="book" data-act="openWriting" data-i="${i}"><span class="book-type">${typeOf(w.type).icon} ${typeOf(w.type).name}</span><b>${esc(w.title)}</b><span class="stars">${'★'.repeat(w.stars)}${'☆'.repeat(3 - w.stars)}</span><small>${w.date} · ${wordCount(w.text)} words</small></button>`).join('')}</section>` : '<p class="muted card">Nothing here yet. Your published writing will show up on this shelf.</p>'}`;
   }
@@ -980,7 +1001,7 @@
       <section class="sub-head s-writing"><button class="back" data-act="nav" data-to="studio" aria-label="Back">←</button><span class="sub-ic">${t.icon}</span><div><h1>${t.name}</h1><p>${t.blurb}</p></div></section>
       <section class="card stack">
         <h2>1. Pick your level</h2>
-        <div class="goal-pick">${STUDIO.goals.map((g, i) => `<button class="goal-opt lv${i} ${i === lvl ? 'on' : ''}" data-act="setNewLvl" data-l="${i}"><b>${LEVEL_NAMES[i].long}</b><span>${g.label}</span></button>`).join('')}</div>
+        <div class="goal-pick">${goalsFor(t).map((g, i) => `<button class="goal-opt lv${i} ${i === lvl ? 'on' : ''}" data-act="setNewLvl" data-l="${i}"><b>${LEVEL_NAMES[i].long}</b><span>${g.label}</span></button>`).join('')}</div>
         <h2>2. Pick a topic</h2>
         <div class="prompts">${t.prompts.map((p) => `<button class="prompt-opt ${p === prompt ? 'on' : ''}" data-act="setPrompt" data-v="${esc(p)}">${esc(p)}</button>`).join('')}</div>
         <label class="lbl" for="ownTopic">Or write your own topic</label>
@@ -998,7 +1019,7 @@
   const MISSPELL = { dont: "don't", cant: "can't", im: "I'm", wont: "won't", didnt: "didn't", isnt: "isn't", becuase: 'because', becaus: 'because', becuz: 'because', thier: 'their', freind: 'friend', frend: 'friend', alot: 'a lot', wint: 'went', sed: 'said', wuz: 'was', becoz: 'because', beutiful: 'beautiful', favrite: 'favorite', favorit: 'favorite', thay: 'they', whent: 'went', wher: 'where', becase: 'because', realy: 'really', togather: 'together', aftr: 'after', frist: 'first', scool: 'school', skool: 'school', peple: 'people', evry: 'every', lets: "let's" };
 
   function autoChecks(d) {
-    const t = typeOf(d.type), g = STUDIO.goals[d.lvl], text = d.text.trim();
+    const t = typeOf(d.type), g = goalsFor(t)[d.lvl], text = d.text.trim();
     const sents = sentencesOf(text);
     const words = wordCount(text);
     const lc = text.toLowerCase();
@@ -1012,12 +1033,14 @@
     checks.push({ ok: loneI === 0, label: 'The word "I" is always a capital', detail: loneI ? `Found "i" ${loneI} time${loneI > 1 ? 's' : ''}.` : '' });
     const found = Object.keys(MISSPELL).filter((w) => new RegExp(`\\b${w}\\b`, 'i').test(text));
     checks.push({ ok: found.length === 0, label: 'No common spelling slips', detail: found.length ? found.map((w) => `${w} → ${MISSPELL[w]}`).join(', ') : '' });
-    if (d.lvl >= 1) {
+    if (d.lvl >= 1 && !t.checks) {
       const used = t.words.filter((w) => lc.includes(w.toLowerCase()));
       checks.push({ ok: used.length >= (d.lvl === 2 ? 3 : 2), label: `Uses ${d.lvl === 2 ? 3 : 2}+ linking words (${t.words.slice(0, 4).join(', ')}…)`, detail: used.length ? `You used: ${used.join(', ')}` : '' });
     }
     if (d.lvl === 2 && d.type === 'story') checks.push({ ok: /["“].+?["”]/.test(text), label: 'Includes dialogue in quotation marks', detail: '' });
     if (d.lvl === 2 && ['opinion', 'info', 'howto'].includes(d.type)) checks.push({ ok: /(in conclusion|that is why|that's why|now you|to sum up|so remember)/i.test(text), label: 'Has a concluding sentence', detail: '' });
+    if (g.paragraphs) { const n = text.split(/\n\s*\n/).filter((x) => x.trim()).length; checks.push({ ok: n >= g.paragraphs, label: `At least ${g.paragraphs} paragraph${g.paragraphs > 1 ? 's' : ''} (leave a blank line between them)`, detail: `You have ${n}.` }); }
+    if (t.checks) checks.push(...t.checks(text, d.lvl));
     if (d.type === 'letter') {
       checks.push({ ok: /^dear\b.+,/i.test(text), label: 'Starts with a greeting like "Dear Grandma,"', detail: '' });
       checks.push({ ok: /(love|your friend|sincerely|from|yours)[^\n]*,/i.test(text), label: 'Has a closing like "Love," with a comma', detail: '' });
@@ -1028,7 +1051,7 @@
   const SELF = ['I read my writing out loud (or used 🔊 Listen).', 'Every sentence is about my topic.', 'I used describing words.', 'My writing has a beginning, middle, and end.'];
 
   function screenStudioEdit() {
-    const d = P.draft, t = typeOf(d.type), g = STUDIO.goals[d.lvl];
+    const d = P.draft, t = typeOf(d.type), g = goalsFor(t)[d.lvl];
     const steps = ['Plan', 'Write', 'Check', 'Publish'];
     const plan = t.plan.filter((f) => !(d.lvl < 2 && /Grade 3/.test(f.label)));
     let body = '';
@@ -1058,7 +1081,7 @@
         <div class="row-between"><h2>Check your writing</h2><span class="goal-chip">${passedN} of ${checks.length} checks</span></div>
         <ul class="checks">${checks.map((c) => `<li class="${c.ok ? 'ok' : 'no'}"><span class="mark">${c.ok ? '✓' : '!'}</span><span><b>${esc(c.label)}</b>${c.detail ? `<small>${esc(c.detail)}</small>` : ''}</span></li>`).join('')}</ul>
         <h3>Check it yourself</h3>
-        ${SELF.map((s, i) => `<label class="toggle"><input type="checkbox" id="self${i}" data-self="${i}" ${d.self && d.self[i] ? 'checked' : ''}><span>${esc(s)}</span></label>`).join('')}
+        ${(t.self || SELF).map((s, i) => `<label class="toggle"><input type="checkbox" id="self${i}" data-self="${i}" ${d.self && d.self[i] ? 'checked' : ''}><span>${esc(s)}</span></label>`).join('')}
         <div class="preview paper-view">${esc(d.text) || '<span class="muted">Nothing written yet.</span>'}</div>
         <div class="row"><button class="btn" data-act="step" data-n="1">← Fix it up</button><button class="btn" data-act="listenDraft">🔊 Listen</button><button class="btn primary" data-act="step" data-n="3" ${wordCount(d.text) < 3 ? 'disabled' : ''}>Ready to publish →</button></div>
       </section>`;
@@ -1085,7 +1108,7 @@
     title && title.addEventListener('input', () => { d.title = title.value; save(); });
     const ta = document.getElementById('draftText');
     if (ta) {
-      const g = STUDIO.goals[d.lvl];
+      const g = goalsFor(typeOf(d.type))[d.lvl];
       const upd = () => {
         d.text = ta.value;
         const w = wordCount(ta.value), s = sentencesOf(ta.value).length;
@@ -1178,17 +1201,18 @@
   function withData(data, fn) {
     const saved = P;
     P = Object.assign(blankData(), data);
-    try { return fn(); } finally { P = saved; }
+    applyTrack(trackOf());
+    try { return fn(); } finally { P = saved; applyTrack(trackOf()); }
   }
   function summarize(data) {
     return withData(data, () => {
       const days = Object.keys(P.daily).sort();
       const played = [];
-      SUBJECTS.forEach((s) => s.skills.forEach((k) => k.levels.forEach((L, l) => { const b = best(s.id, k.id, l); if (b != null) played.push({ s, k, l, b }); })));
+      SUBJ().forEach((s) => s.skills.forEach((k) => k.levels.forEach((L, l) => { const b = best(s.id, k.id, l); if (b != null) played.push({ s, k, l, b }); })));
       const weak = played.filter((x) => x.b < 70).sort((a, b) => a.b - b.b)[0];
       const week = days.filter((d) => d >= dayKey(new Date(Date.now() - 6 * 864e5))).reduce((a, d) => a + (P.daily[d].q || 0), 0);
       return { xp: P.xp, level: playerLevel(), quests: P.quests, streak: streakNow(), ready: readiness().pct, last: days[days.length - 1] || null,
-        week, mastery: Object.fromEntries(SUBJECTS.map((s) => [s.id, mastery(s)])), weak, writings: P.writings.length, badges: Object.keys(P.badges).length };
+        week, track: trackOf(), mastery: Object.fromEntries(SUBJ().map((s) => [s.id, mastery(s)])), weak, writings: P.writings.length, badges: Object.keys(P.badges).length };
     });
   }
   const lastSeen = (d) => { if (!d) return 'Not yet'; if (d === dayKey()) return 'Today'; if (d === yesterday()) return 'Yesterday'; return new Date(d + 'T12:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }); };
@@ -1271,6 +1295,8 @@
         <input id="stuName" class="input" maxlength="16" value="${esc(view.typed || '')}" autocomplete="off">
         <span class="lbl">Pick a buddy</span>
         <div class="avatars">${AVATARS.map((a) => `<button class="av-btn ${a === pick ? 'on' : ''}" data-act="pickAvatar" data-a="${a}">${a}</button>`).join('')}</div>
+        <span class="lbl">Grade</span>
+        <div class="seg">${Object.values(TRACKS).map((t) => `<button class="${(view.track || 'g2') === t.id ? 'on' : ''}" data-act="pickTrack" data-t="${t.id}">${esc(t.label)}</button>`).join('')}</div>
         <label class="lbl" for="stuPin">Make a 4-digit PIN (a secret number to sign in)</label>
         <input id="stuPin" class="input" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="new-password">
         <label class="lbl" for="stuPin2">Type your PIN again</label>
@@ -1320,19 +1346,21 @@
         <div class="stat"><b>${rows.length}</b><span>Students</span></div>
         <div class="stat"><b>${active}</b><span>Learned today</span></div>
         <div class="stat"><b>${rows.reduce((a, r) => a + r.sum.week, 0)}</b><span>Questions this week</span></div>
-        <div class="stat"><b>${avgReady}%</b><span>Avg Grade 3 ready</span></div>
+        <div class="stat"><b>${avgReady}%</b><span>Avg ready</span></div>
       </section>
+      ${Object.values(TRACKS).filter((t) => rows.some((r) => r.sum.track === t.id)).map((t) => { const subs = SUBJECTS.filter((x) => x.track === t.id); const lv = t.levels; return `
+      <h2 class="sec">${esc(t.label)}</h2>
       <section class="card dash-wrap"><div class="dash-scroll"><table class="dash">
-        <thead><tr><th>Student</th><th>Last active</th><th>XP</th><th>Quests</th><th>Streak</th><th>This week</th>${SUBJECTS.map((s) => `<th class="s-${s.color}">${s.name}</th>`).join('')}<th>Grade 3 ready</th><th>Needs practice</th><th></th></tr></thead>
-        <tbody>${rows.map(({ st, sum }) => `<tr>
+        <thead><tr><th>Student</th><th>Last active</th><th>XP</th><th>Quests</th><th>Streak</th><th>This week</th>${subs.map((x) => `<th class="s-${x.color}">${x.name}</th>`).join('')}<th>${t.ready} ready</th><th>Needs practice</th><th></th></tr></thead>
+        <tbody>${rows.filter((r) => r.sum.track === t.id).map(({ st, sum }) => `<tr>
           <td><button class="link" data-act="openStudent" data-sid="${st.id}"><span class="av">${esc(st.avatar || '🦊')}</span> <b>${esc(st.name)}</b></button></td>
           <td>${lastSeen(sum.last)}</td><td class="num">${sum.xp}</td><td class="num">${sum.quests}</td><td class="num">${sum.streak ? '🔥 ' + sum.streak : '–'}</td><td class="num">${sum.week} q</td>
-          ${SUBJECTS.map((s) => `<td class="s-${s.color}"><span class="meter mini"><i style="width:${sum.mastery[s.id]}%"></i></span><small>${sum.mastery[s.id]}%</small></td>`).join('')}
+          ${subs.map((x) => `<td class="s-${x.color}"><span class="meter mini"><i style="width:${sum.mastery[x.id] || 0}%"></i></span><small>${sum.mastery[x.id] || 0}%</small></td>`).join('')}
           <td class="num"><b>${sum.ready}%</b></td>
-          <td>${sum.weak ? `${esc(sum.weak.k.name)} <small class="muted">${LEVEL_NAMES[sum.weak.l].short} · ${sum.weak.b}%</small>` : '<span class="muted">–</span>'}</td>
+          <td>${sum.weak ? `${esc(sum.weak.k.name)} <small class="muted">${lv[sum.weak.l].short} · ${sum.weak.b}%</small>` : '<span class="muted">–</span>'}</td>
           <td><button class="icon-btn mini" data-act="askRemoveStudent" data-sid="${st.id}" aria-label="Remove ${esc(st.name)}">🗑️</button></td>
-        </tr>`).join('')}</tbody></table></div></section>`}
-      <p class="fine">Mastery is the share of stars earned across all levels in that subject. Grade 3 ready is the share of skills whose Grade 3 Challenge is passed (70% or more).</p>`;
+        </tr>`).join('')}</tbody></table></div></section>`; }).join('')}`}
+      <p class="fine">Mastery is the share of stars earned across all levels in that subject. Ready is the share of skills whose top level (Grade 3 Challenge or Grade 9 Ready) is passed with 70% or more.</p>`;
   }
   AFTER.dashboard = () => {
     if (view.students || view.loading) return;
@@ -1420,13 +1448,16 @@
     clearPick: () => { Q.st.picked = []; render(); },
     tapWord: (ds) => { const i = +ds.i; const s = Q.st.sel; SFX.play(s.includes(i) ? 'unplace' : 'pop'); Q.st.sel = s.includes(i) ? s.filter((x) => x !== i) : [...s, i]; render(); },
 
-    pickAvatar: (ds) => { view.avatar = ds.a; view.typed = (document.getElementById('newName') || {}).value || ''; render(); },
+    pickAvatar: (ds) => { view.avatar = ds.a; view.typed = ((document.getElementById('newName') || document.getElementById('stuName')) || {}).value || ''; render(); },
+    pickTrack: (ds) => { view.track = ds.t; view.typed = ((document.getElementById('newName') || document.getElementById('stuName')) || {}).value || ''; render(); },
+    setTrack: (ds) => { P.track = ds.t; applyTrack(ds.t); checkBadges(); save(); SFX.play('pop'); render(); },
     createPlayer: () => {
       const name = ((document.getElementById('newName') || {}).value || '').trim();
       if (!name) { const i = document.getElementById('newName'); i.classList.add('err'); i.placeholder = 'Please type a name first'; i.focus(); return; }
       const id = 'p' + Date.now().toString(36);
       profiles.push({ id, name, avatar: view.avatar || AVATARS[0] });
       saveProfiles();
+      store.set('elaq_p_' + id, { track: view.track || 'g2' });
       loadProfile(id);
       save();
       go('home');
@@ -1579,6 +1610,7 @@
       if (!/^\d{4}$/.test(p1)) { view.err = 'Your PIN must be exactly 4 digits.'; render(); return; }
       if (p1 !== p2) { view.err = 'The two PINs do not match.'; render(); return; }
       const data = from ? Object.assign(blankData(), store.get('elaq_p_' + from, {})) : blankData();
+      if (!from || view.track) data.track = view.track || data.track || 'g2';
       const avatar = view.avatar || (from && (profiles.find((p) => p.id === from) || {}).avatar) || AVATARS[0];
       view.busy = true; view.err = ''; render();
       try {

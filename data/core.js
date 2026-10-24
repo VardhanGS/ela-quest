@@ -65,7 +65,7 @@ const U = {
       tries++;
       const q = U.pick(fns)();
       if (!q) continue;
-      const key = JSON.stringify([q.q, q.a, q.say, q.words, q.items && q.items.map((i) => i.w), q.parts]);
+      const key = JSON.stringify([q.q, q.a, q.say, q.words, q.items && q.items.map((i) => i.w), q.parts, q.passage && q.passage.text]);
       if (seen.has(key)) continue;
       seen.add(key);
       out.push(q);
@@ -78,7 +78,7 @@ const U = {
 };
 
 const SUBJECTS = [];
-function addSubject(s) { SUBJECTS.push(s); }
+function addSubject(s) { s.track = s.track || 'g2'; SUBJECTS.push(s); }
 
 const LEVEL_NAMES = [
   { short: 'Starter', grade: 'Grade 2', long: 'Grade 2 Starter' },

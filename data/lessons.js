@@ -112,3 +112,77 @@ const LESSONS = {
   LESSONS[`${id}.1`] = { rule: 'Listen to the word. Tap Sentence or Meaning if you need help. The boxes show how many letters it has.', ex: 'f _ _ _ → frog', video: 'spelling' };
   LESSONS[`${id}.2`] = { rule: 'This is just like a real spelling bee. Listen carefully, picture the word, then spell it with no hints.', ex: 'Say it · Picture it · Spell it', video: 'spelling' };
 });
+
+// ---- Grade 8 (New Jersey) ----
+Object.assign(LESSONS, {
+  'g8stories.0': { rule: 'Strong readers cite evidence. Part A asks what you think; Part B asks which quotation proves it. Answer Part A, then find the line that best supports it.', ex: 'Part A: She becomes confident. → Part B: "She set the note cards face-down."' },
+  'g8stories.1': { rule: 'Track how a character changes from beginning to end, and find the moment that causes the change.', ex: 'Resentful → understanding (the crayon drawing)' },
+  'g8stories.2': { rule: 'Dramatic irony happens when the audience knows something a character does not. Unusual structures, like journal entries, shape how the theme unfolds.', ex: 'We see the birthday banner; Malik does not.' },
+  'g8theme.0': { rule: 'A theme is a message about life stated as a full sentence. A topic is just one or two words.', ex: 'Topic: courage · Theme: Courage means acting even when you are afraid.' },
+  'g8theme.1': { rule: 'An objective summary gives the main points in order, with no opinions or judgments.', ex: 'Not: "an amazing story" · Yes: "A student organizes a food-donation program…"' },
+  'g8theme.2': { rule: 'Theme comes from how the characters change and what they learn. Summaries stay neutral.', ex: 'Ask: What does the author want readers to understand about life?' },
+  'g8pov.0': { rule: 'First person uses I. Third person limited follows one character\'s thoughts. Third person omniscient knows everyone\'s thoughts.', ex: 'I crept down… (first) · She wondered… (limited)' },
+  'g8pov.1': { rule: 'Verbal irony: saying the opposite of what you mean. Situational: the opposite of what you expect happens. Dramatic: the audience knows more than a character.', ex: 'A lifeguard nearly drowns → situational irony' },
+  'g8pov.2': { rule: 'Point of view controls what readers know, which can create suspense or humor.', ex: 'Omniscient narrator reveals the brother ate the cake.' },
+  'g8articles.0': { rule: 'Find the central idea, then trace how each paragraph develops it. Use evidence from the text for every answer.', ex: 'Central idea: Menlo Park invented the research lab.' },
+  'g8articles.1': { rule: 'In an argument, find the claim, the evidence, and how the author answers the other side.', ex: 'Claim → evidence → counterclaim → rebuttal' },
+  'g8articles.2': { rule: 'Trace causes and effects. With paired texts, compare each author\'s claim, evidence, and point of view.', ex: 'Hydrogen + spark → fire → end of the airship era' },
+  'g8argeval.0': { rule: 'Relevant evidence directly supports the claim. Irrelevant evidence may be true but does not prove the point.', ex: 'Claim: add recycling. Relevant: 400 bottles thrown away weekly.' },
+  'g8argeval.1': { rule: 'Watch for faulty reasoning: bandwagon, attacking the person, false cause, either-or, overgeneralization, slippery slope.', ex: '"Everyone has these sneakers, so you should too." → bandwagon' },
+  'g8argeval.2': { rule: 'Sound reasoning connects evidence logically to the claim. Sufficient evidence is enough to convince a careful reader.', ex: 'Scores for all 300 students rose → sufficient. One student liked it → not sufficient.' },
+  'g8structure.0': { rule: 'Text structure is how ideas are organized. Signal words are clues.', ex: 'first/then → chronological · while/both → compare · because/so → cause and effect' },
+  'g8structure.1': { rule: 'Authors write to inform, persuade, or entertain. Strong authors acknowledge conflicting views before responding.', ex: '"Some argue… However, studies show…"' },
+  'g8structure.2': { rule: 'Ask why the author organized the text this way and how it helps the purpose.', ex: 'Problem → solution structure supports a persuasive purpose.' },
+  'g8verbals.0': { rule: 'Verbals are verb forms used as other parts of speech. Gerund = -ing noun. Participle = verb used as an adjective. Infinitive = to + verb.', ex: 'Swimming is fun (gerund) · the barking dog (participle) · I want to learn (infinitive)' },
+  'g8verbals.1': { rule: 'Ask what job the verbal does: Is it a subject, an object, or a describing word?', ex: 'Hiking is fun → subject · the exhausted runners → adjective' },
+  'g8verbals.2': { rule: 'A dangling verbal has nothing logical to describe. Put the doer right after the verbal phrase.', ex: 'Walking to school, the rain soaked me ✗ → Walking to school, I got soaked ✓' },
+  'g8voice.0': { rule: 'Active voice: the subject does the action. Passive voice: the subject receives the action (was/were + past participle).', ex: 'The chef prepared the meal (active) · The meal was prepared (passive)' },
+  'g8voice.1': { rule: 'To switch to active, move the doer to the front. To switch to passive, make the receiver the subject.', ex: 'The window was broken by the ball → The ball broke the window.' },
+  'g8voice.2': { rule: 'Use active voice for clear, energetic writing. Use passive when the doer is unknown or unimportant. Avoid switching voice mid-sentence.', ex: 'The painting was stolen last night. (thief unknown)' },
+  'g8mood.0': { rule: 'Indicative states facts. Imperative gives commands. Interrogative asks. Conditional says what would happen. Subjunctive expresses wishes, demands, or things contrary to fact.', ex: 'I wish I were taller. → subjunctive' },
+  'g8mood.1': { rule: 'Use "were" for wishes and unreal "if" statements. After suggest, insist, demand, or recommend, use the base verb.', ex: 'If I were… · I suggest that he be on time.' },
+  'g8mood.2': { rule: 'Keep the mood consistent within a sentence, and choose a mood for its effect.', ex: 'Preheat the oven, then mix the flour. (both imperative)' },
+  'g8punct.0': { rule: 'A comma shows a short pause. An ellipsis (…) shows trailing off. A dash (—) shows a sudden break or adds emphasis.', ex: '"I think we should—" · "Well… maybe."' },
+  'g8punct.1': { rule: 'In a quotation, an ellipsis shows that you left out words. The meaning must stay the same.', ex: '"The Pine Barrens … are home to rare plants."' },
+  'g8punct.2': { rule: 'A semicolon joins two complete sentences. A colon introduces a list or explanation. Use a comma between coordinate adjectives.', ex: 'It rained; we stayed in. · Bring three things: a, b, and c.' },
+  'g8usage.0': { rule: 'Affect is usually a verb; effect is usually a noun. Then is time; than compares. It\'s = it is; its shows ownership.', ex: 'The rule will affect us. The effect was big.' },
+  'g8usage.1': { rule: 'Put modifiers right next to what they describe, and make every pronoun\'s noun clear.', ex: 'She almost ate the whole pizza ✗ → She ate almost the whole pizza ✓' },
+  'g8usage.2': { rule: 'Use spelling rules: i before e except after c, double the final consonant before -ed or -ing in stressed syllables, and keep the silent e before -ment.', ex: 'receive · occurred · beginning · achievement' },
+  'g8roots.0': { rule: 'Greek and Latin roots carry meaning. Learn the root, and you can unlock many words.', ex: 'spect = look → inspect, spectator, perspective' },
+  'g8roots.1': { rule: 'Prefixes change meaning at the start; suffixes change meaning or part of speech at the end.', ex: 'trans- = across · -ous = full of' },
+  'g8roots.2': { rule: 'Break an unfamiliar word into its parts and combine their meanings.', ex: 'in + aud + ible = not able to be heard' },
+  'g8context.0': { rule: 'Look for definition clues (or, that is), contrast clues (unlike, instead), and example clues (such as).', ex: 'Unlike her gregarious sister, who loved parties… → gregarious = outgoing' },
+  'g8context.1': { rule: 'Name the type of clue: definition, contrast, example, description, or inference.', ex: '"…or clear" → definition clue' },
+  'g8context.2': { rule: 'With inference clues, combine the details in the sentence with what you already know.', ex: 'After the drought, a meager trickle → meager = very small' },
+  'g8connote.0': { rule: 'Denotation is the dictionary meaning. Connotation is the feeling a word carries: positive, negative, or neutral.', ex: 'thrifty (positive) vs. cheap (negative)' },
+  'g8connote.1': { rule: 'Writers choose words with connotations that create the feeling they want.', ex: 'aroma vs. stench' },
+  'g8connote.2': { rule: 'Tone is the author\'s attitude, built through word choice.', ex: 'stubborn (critical tone) vs. determined (admiring tone)' },
+  'g8figurative.0': { rule: 'Simile: like/as. Metaphor: says one thing is another. Personification: human traits for non-human things. Hyperbole: extreme exaggeration.', ex: 'The classroom was a zoo. → metaphor' },
+  'g8figurative.1': { rule: 'Idioms have non-literal meanings. Allusions refer to famous stories or people. Irony says or shows the opposite. Puns play on double meanings.', ex: 'Pandora\'s box → allusion' },
+  'g8figurative.2': { rule: 'Figurative language means more than the literal words. Ask what the comparison suggests.', ex: 'Time is a thief → summer passes too quickly.' },
+  'g8analogies.0': { rule: 'An analogy compares two pairs of words with the same relationship.', ex: 'hot : cold :: tall : short (antonyms)' },
+  'g8analogies.1': { rule: 'Name the relationship first: antonyms, synonyms, part to whole, tool to use, creator to creation…', ex: 'petal : flower → part to whole' },
+  'g8analogies.2': { rule: 'Some analogies show degree, like a stronger form of a word.', ex: 'enormous : big :: furious : angry' },
+  'g8claims.0': { rule: 'A claim is a debatable position you can support with evidence. Facts and preferences are not claims.', ex: 'Fact: School starts at 8. Claim: School should start at 8:30.' },
+  'g8claims.1': { rule: 'A counterclaim is the opposing view. A strong rebuttal respectfully answers it with reasons or evidence.', ex: 'Some argue… However, districts that changed…' },
+  'g8claims.2': { rule: 'Organize an argument: claim → reasons → evidence → counterclaim → rebuttal → conclusion.', ex: 'Claim, First…, For example…, Some argue…, However…, For these reasons…' },
+  'g8evidencew.0': { rule: 'Use evidence that is relevant, specific, and from credible sources.', ex: 'Census Bureau data > a friend\'s guess' },
+  'g8evidencew.1': { rule: 'Introduce every quotation with its source, then explain how it supports your claim.', ex: 'According to the AAP, schools should start "no earlier than 8:30 a.m." This shows…' },
+  'g8evidencew.2': { rule: 'A paraphrase uses your own words and structure, and still credits the source. Copying without credit is plagiarism.', ex: '…(Lee, 2022)' },
+  'g8transit.0': { rule: 'Transitions show how ideas connect: contrast, addition, cause and effect, example, or time.', ex: 'However · Furthermore · Consequently · For instance' },
+  'g8transit.1': { rule: 'Match the transition to the relationship between ideas.', ex: 'Contrast: nevertheless · Result: as a result' },
+  'g8transit.2': { rule: 'Cohesive paragraphs flow logically and every sentence supports the topic.', ex: 'Claim → For example → As a result → Therefore' },
+  'g8style.0': { rule: 'Academic writing is formal: no slang, few contractions, and an objective tone.', ex: 'Kids are gonna… ✗ → Students are likely to… ✓' },
+  'g8style.1': { rule: 'Concise writing removes extra words without losing meaning.', ex: 'Due to the fact that → Because' },
+  'g8style.2': { rule: 'Precise writing replaces vague words with specific details.', ex: 'a lot of stuff → the phonograph and the light bulb' },
+  'g8narr.0': { rule: 'Show, don\'t tell: use actions, details, and dialogue instead of naming feelings.', ex: 'Mia was nervous → Mia\'s hands trembled.' },
+  'g8narr.1': { rule: 'Punctuate dialogue inside the quotation marks. Slow the pace at important moments with detail.', ex: '"Hurry up," Leo whispered, "or we\'ll miss the bus."' },
+  'g8narr.2': { rule: 'Hook readers at the start, signal shifts in time and place, and end with reflection.', ex: 'Three years later… · Looking back, I realized…' },
+});
+for (let u = 1; u <= 15; u++) {
+  LESSONS[`vwc${u}.0`] = { rule: `Unit ${u}: learn what each word means. Read the memory hint, say the word, and connect it to something you know.`, ex: 'Word → definition → memory hint' };
+  LESSONS[`vwc${u}.1`] = { rule: 'Completing the sentence: read the whole sentence, look for clues, then try each word in the blank.', ex: 'Clue words point to the meaning the blank needs.' };
+  LESSONS[`vwc${u}.2`] = { rule: 'Synonyms mean the same; antonyms mean the opposite. Watch out for answer choices that are synonyms when the question asks for an antonym.', ex: 'churlish: synonym rude · antonym polite' };
+}
+LESSONS['vwcreview.0'] = LESSONS['vwcreview.1'] = { rule: 'Cumulative review mixes words from many units. Space out your practice and review missed words often.', ex: 'Definitions + sentences + synonyms' };
+LESSONS['vwcreview.2'] = { rule: 'This is final-test practice on all 300 words. Use the memory hints for any word you miss.', ex: 'All 15 units' };
