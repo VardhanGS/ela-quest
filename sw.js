@@ -1,4 +1,4 @@
-const CACHE = "elaquest-v7";
+const CACHE = "elaquest-v8";
 const ASSETS = [
   "./",
   "./index.html",
@@ -20,8 +20,8 @@ const ASSETS = [
   "./data/g8-reading.js",
   "./data/g8-language.js",
   "./data/g8-vocab.js",
-  "./data/vwc-words.js",
-  "./data/vwc.js",
+  "./data/vwd-words.js",
+  "./data/vwd.js",
   "./data/g8-writing.js",
   "./data/lessons.js",
   "./data/videos.js",

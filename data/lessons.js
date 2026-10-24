@@ -180,9 +180,9 @@ Object.assign(LESSONS, {
   'g8narr.2': { rule: 'Hook readers at the start, signal shifts in time and place, and end with reflection.', ex: 'Three years later… · Looking back, I realized…' },
 });
 for (let u = 1; u <= 15; u++) {
-  LESSONS[`vwc${u}.0`] = { rule: `Unit ${u}: learn what each word means. Read the memory hint, say the word, and connect it to something you know.`, ex: 'Word → definition → memory hint' };
-  LESSONS[`vwc${u}.1`] = { rule: 'Completing the sentence: read the whole sentence, look for clues, then try each word in the blank.', ex: 'Clue words point to the meaning the blank needs.' };
-  LESSONS[`vwc${u}.2`] = { rule: 'Synonyms mean the same; antonyms mean the opposite. Watch out for answer choices that are synonyms when the question asks for an antonym.', ex: 'churlish: synonym rude · antonym polite' };
+  LESSONS[`vwd${u}.0`] = { rule: `Unit ${u}: learn what each word means. Read the memory hint, say the word, and connect it to something you know.`, ex: 'Word → definition → memory hint' };
+  LESSONS[`vwd${u}.1`] = { rule: 'Completing the sentence: read the whole sentence, look for clues, then try each word in the blank.', ex: 'Clue words point to the meaning the blank needs.' };
+  LESSONS[`vwd${u}.2`] = { rule: 'Synonyms mean the same; antonyms mean the opposite. Watch out for answer choices that are synonyms when the question asks for an antonym.', ex: 'surly: synonym grumpy · antonym friendly' };
 }
-LESSONS['vwcreview.0'] = LESSONS['vwcreview.1'] = { rule: 'Cumulative review mixes words from many units. Space out your practice and review missed words often.', ex: 'Definitions + sentences + synonyms' };
-LESSONS['vwcreview.2'] = { rule: 'This is final-test practice on all 300 words. Use the memory hints for any word you miss.', ex: 'All 15 units' };
+LESSONS['vwdreview.0'] = LESSONS['vwdreview.1'] = { rule: 'Cumulative review mixes words from many units. Space out your practice and review missed words often.', ex: 'Definitions + sentences + synonyms' };
+LESSONS['vwdreview.2'] = { rule: 'This is final-test practice on all 300 words. Use the memory hints for any word you miss.', ex: 'All 15 units' };

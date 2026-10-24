@@ -145,5 +145,35 @@ const VIDEOS = [
   "src": "videos/word-parts.mp4",
   "poster": "videos/word-parts.jpg",
   "secs": 43
+ },
+ {
+  "id": "spelling",
+  "title": "How to Study Spelling Words",
+  "subject": "spelling",
+  "label": "Spelling Bee",
+  "desc": "Look, say, cover, write, check, plus tips for a real spelling bee.",
+  "practice": [
+   "spelling",
+   "starter",
+   0
+  ],
+  "src": "videos/spelling.mp4",
+  "poster": "videos/spelling.jpg",
+  "secs": 59
+ },
+ {
+  "id": "synonyms",
+  "title": "Synonyms, Antonyms, and Shades of Meaning",
+  "subject": "vocab",
+  "label": "Vocabulary",
+  "desc": "Words that mean the same, words that mean the opposite, and words that are stronger.",
+  "practice": [
+   "vocab",
+   "synonyms",
+   0
+  ],
+  "src": "videos/synonyms.mp4",
+  "poster": "videos/synonyms.jpg",
+  "secs": 44
  }
 ];

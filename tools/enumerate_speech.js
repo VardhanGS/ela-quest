@@ -10,7 +10,7 @@ const ctx = { console, window: {}, TextEncoder };
 ctx.window = ctx;
 vm.createContext(ctx);
 const load = (f) => vm.runInContext(fs.readFileSync(path.join(ROOT, f), 'utf8'), ctx, { filename: f });
-['voice.js', 'data/core.js', 'data/phonics.js', 'data/spellwords.js', 'data/spelling.js', 'data/grammar.js', 'data/reading.js', 'data/vocab.js', 'data/writing.js', 'data/lessons.js'].forEach(load);
+['voice.js', 'data/core.js', 'data/phonics.js', 'data/spellwords.js', 'data/spelling.js', 'data/grammar.js', 'data/reading.js', 'data/vocab.js', 'data/writing.js', 'data/g8-reading.js', 'data/g8-language.js', 'data/g8-vocab.js', 'data/vwd-words.js', 'data/vwd.js', 'data/g8-writing.js', 'data/lessons.js'].forEach(load);
 vm.runInContext('this.Voice = Voice; this.SUBJECTS = SUBJECTS; this.LESSONS = LESSONS;', ctx);
 const { Voice, SUBJECTS, LESSONS } = ctx;
 
