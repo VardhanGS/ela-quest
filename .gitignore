@@ -1,0 +1,7 @@
+.DS_Store
+# local tooling (large / regenerable)
+tools/.venv/
+tools/tts-models/
+tools/.voice-cache/
+tools/speech-lines.json
+__pycache__/
