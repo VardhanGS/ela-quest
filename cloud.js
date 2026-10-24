@@ -109,6 +109,9 @@ const Cloud = (() => {
     m.badges = { ...a.badges, ...b.badges };
     Object.keys(m.badges).forEach((k) => { if (a.badges?.[k] && b.badges?.[k]) m.badges[k] = a.badges[k] < b.badges[k] ? a.badges[k] : b.badges[k]; });
     m.watched = { ...b.watched, ...a.watched };
+    // spelling words: keep whichever device has seen the word more
+    m.words = { ...(b.words || {}) };
+    Object.entries(a.words || {}).forEach(([w, x]) => { const y = m.words[w]; if (!y || (x.right + x.wrong) >= (y.right + y.wrong)) m.words[w] = x; });
     m.gone = [...new Set([...(a.gone || []), ...(b.gone || [])])].slice(-400);
     const gone = new Set(m.gone);
     const wid = (w) => w.id || `${w.date}|${w.title}`;

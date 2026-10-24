@@ -10,7 +10,7 @@ const ctx = { console, window: {}, TextEncoder };
 ctx.window = ctx;
 vm.createContext(ctx);
 const load = (f) => vm.runInContext(fs.readFileSync(path.join(ROOT, f), 'utf8'), ctx, { filename: f });
-['voice.js', 'data/core.js', 'data/phonics.js', 'data/grammar.js', 'data/reading.js', 'data/writing.js', 'data/lessons.js'].forEach(load);
+['voice.js', 'data/core.js', 'data/phonics.js', 'data/spellwords.js', 'data/spelling.js', 'data/grammar.js', 'data/reading.js', 'data/vocab.js', 'data/writing.js', 'data/lessons.js'].forEach(load);
 vm.runInContext('this.Voice = Voice; this.SUBJECTS = SUBJECTS; this.LESSONS = LESSONS;', ctx);
 const { Voice, SUBJECTS, LESSONS } = ctx;
 
@@ -34,9 +34,10 @@ for (const s of SUBJECTS) for (const k of s.skills) k.levels.forEach((L, l) => {
   let stale = 0;
   for (let r = 0; r < RUNS && stale < 250; r++) {
     const before = lines.size;
-    for (const q of L.gen()) {
+    for (const q of L.gen({})) {
       Voice.build.question(q).forEach((p) => add(p));
       if (q.say) { add(q.say); add(q.say, 'slow'); }
+      if (q.t === 'spell') { add(q.sentence); add(q.def); }
       if (q.sayOpts && q.opts) q.opts.forEach((o) => add(o));
       if (q.sayOpts && q.items) q.items.forEach((it) => add(it.w));
       if (q.t === 'build') q.tiles.forEach((t) => add(t, 'tile'));

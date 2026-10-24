@@ -21,7 +21,7 @@
   let activeId = store.get('elaq_active', null);
   let P = null;
 
-  const blankData = () => ({ xp: 0, best: {}, plays: {}, daily: {}, streak: { last: null, count: 0 }, badges: {}, writings: [], draft: null, missed: [], fixed: 0, quests: 0, perfects: 0, watched: {} });
+  const blankData = () => ({ xp: 0, best: {}, plays: {}, daily: {}, streak: { last: null, count: 0 }, badges: {}, writings: [], draft: null, missed: [], fixed: 0, quests: 0, perfects: 0, watched: {}, words: {} });
   function loadProfile(id) {
     activeId = id;
     store.set('elaq_active', id);
@@ -87,7 +87,9 @@
     { id: 'writer5', icon: '📚', name: 'Bookshelf', desc: 'Publish 5 pieces of writing.', test: () => P.writings.length >= 5 },
     { id: 'movie', icon: '🎬', name: 'Movie Star', desc: 'Watch 5 video lessons.', test: () => Object.keys(P.watched || {}).length >= 5 },
     { id: 'xp1000', icon: '⚡', name: '1,000 XP', desc: 'Earn 1,000 XP.', test: () => P.xp >= 1000 },
-    ...['phonics', 'grammar', 'reading', 'writing'].map((sid) => ({ id: 'champ_' + sid, icon: { phonics: '🔤', grammar: '✏️', reading: '📚', writing: '🖍️' }[sid], name: `${sid[0].toUpperCase() + sid.slice(1)} Champ`, desc: `Pass every Grade 3 Challenge in ${sid[0].toUpperCase() + sid.slice(1)}.`, test: () => subj(sid).skills.every((k) => passed(sid, k.id, 2)) })),
+    { id: 'bee50', icon: '🐝', name: 'Busy Bee', desc: 'Master 50 spelling words.', test: () => Object.values(P.words || {}).filter((w) => w.mastered).length >= 50 },
+    { id: 'onebee', icon: '🏆', name: 'One Bee Ready', desc: 'Master every word on the One Bee list.', test: () => subj('spelling').skills.filter((k) => k.id.startsWith('onebee')).every((k) => masteredIn(k.words) === k.words.length) },
+    ...['phonics', 'spelling', 'grammar', 'reading', 'vocab', 'writing'].map((sid) => ({ id: 'champ_' + sid, icon: { phonics: '🔤', spelling: '🐝', grammar: '✏️', reading: '📚', vocab: '💬', writing: '🖍️' }[sid], name: `${subj(sid).name} Champ`, desc: `Pass every Grade 3 Challenge in ${subj(sid).name}.`, test: () => subj(sid).skills.every((k) => passed(sid, k.id, 2)) })),
     { id: 'grade3', icon: '🎓', name: 'Ready for Grade 3', desc: 'Pass every Grade 3 Challenge.', test: () => readiness().done === readiness().n },
   ];
   function checkBadges() {
@@ -276,7 +278,7 @@
         <section class="skills">
           ${s.skills.map((k) => `
             <article class="skill card">
-              <h2><span class="skill-ic">${k.icon}</span>${k.name}</h2>
+              <h2><span class="skill-ic">${k.icon}</span>${k.name}${k.words ? ` <small class="muted words-count">${masteredIn(k.words)} of ${k.words.length} words mastered</small>` : ''}</h2>
               <div class="levels">
                 ${k.levels.map((L, l) => {
                   const open = unlocked(s.id, k.id, l);
@@ -340,7 +342,7 @@
     let qs;
     if (opts.mode === 'mix') qs = buildMix();
     else if (opts.mode === 'review') qs = U.sample(P.missed, 8).map((m) => ({ ...m.q, from: m.from }));
-    else qs = skillOf(opts.s, opts.k).levels[opts.l].gen();
+    else qs = skillOf(opts.s, opts.k).levels[opts.l].gen(P.words || {});
     if (!qs.length) { go('home'); return; }
     Q = { ...opts, qs: qs.map(prep), i: 0, points: 0, xp: 0, log: [], st: freshSt(), started: Date.now() };
     if (opts.mode === 'skill' && settings.examples && !opts.noExample) {
@@ -362,6 +364,7 @@
       case 'mc': return q.a;
       case 'build': return q.a;
       case 'type': return q.a[0];
+      case 'spell': return q.a;
       case 'order': return q.list ? q.parts.map((p, i) => `${i + 1}. ${p}`).join('\n') : q.parts.join(' ');
       case 'tap': return q.a.map((i) => q.words[i].replace(/[.,!?;:]+$/, '')).join(', ');
       case 'sort': return q.items.map((it) => `${it.w} → ${q.bins[it.b]}`).join('\n');
@@ -374,6 +377,7 @@
       case 'mc': return st.chosen === q.a;
       case 'build': return st.picked.map((i) => q.tiles[i]).join('') === q.a;
       case 'type': { const v = st.typed.trim().toLowerCase().replace(/[.!?]$/, ''); return q.a.some((a) => a.toLowerCase() === v); }
+      case 'spell': return st.typed.trim().toLowerCase() === q.a.toLowerCase();
       case 'order': { const seq = st.picked.map((i) => q.pool[i].text); return seq.join('|') === q.parts.join('|') || (q.alts || []).some((alt) => alt.join('|') === seq.join('|')); }
       case 'tap': return [...st.sel].sort((a, b) => a - b).join(',') === [...q.a].sort((a, b) => a - b).join(',');
       case 'sort': return q.items.every((it, i) => st.place[i] === it.b);
@@ -394,6 +398,7 @@
       SFX.play(first ? 'firstTry' : 'correct');
       if (settings.sayPraise) setTimeout(() => speak(st.msg.title.replace(/ \(2nd try\)/, '')), 250);
       Q.log.push({ q, ok: true, first });
+      if (q.word) wordStat(q.word, true, first);
       if (Q.mode === 'review') { P.missed = P.missed.filter((m) => m.id !== q._mid); P.gone = [...(P.gone || []), q._mid].slice(-400); P.fixed++; }
     } else {
       st.tries++;
@@ -410,6 +415,7 @@
         if (q.t === 'sort') q.items.forEach((it, i) => { st.place[i] = it.b; });
         st.msg = { kind: 'bad', title: 'Here is the answer:', answer: answerText(q), body: q.why || '' };
         Q.log.push({ q, ok: false });
+        if (q.word) wordStat(q.word, false, false);
         if (Q.mode !== 'review') {
           const clean = { ...q }; delete clean.pool; delete clean._mid;
           const id = Math.random().toString(36).slice(2, 9);
@@ -420,6 +426,17 @@
     save();
     render();
   }
+
+  // Spelling words: mastered after two first-try correct spellings in a row.
+  function wordStat(w, ok, first) {
+    P.words = P.words || {};
+    const s = P.words[w] || { right: 0, wrong: 0, streak: 0, mastered: false };
+    if (ok) { s.right++; s.streak = first ? s.streak + 1 : 0; if (s.streak >= 2) s.mastered = true; }
+    else { s.wrong++; s.streak = 0; s.mastered = false; }
+    s.last = dayKey();
+    P.words[w] = s;
+  }
+  const masteredIn = (words) => words.filter((w) => P.words && P.words[w] && P.words[w].mastered).length;
 
   function nextQ() {
     if (Q.i < Q.qs.length - 1) { Q.i++; Q.st = freshSt(); render(); window.scrollTo(0, 0); return; }
@@ -484,7 +501,7 @@
               <p class="prompt">${nl(q.q)}</p>
               <button class="icon-btn speak" data-act="readQ" aria-label="Read the question aloud">🔊</button>
             </div>
-            ${q.say ? `<div class="say-row"><button class="btn say" data-act="sayWord">🔊 Hear the word</button><button class="btn small ghost" data-act="sayWordSlow">🐢 Slow</button></div>` : ''}
+            ${q.say && q.t !== 'spell' ? `<div class="say-row"><button class="btn say" data-act="sayWord">🔊 Hear the word</button><button class="btn small ghost" data-act="sayWordSlow">🐢 Slow</button></div>` : ''}
             ${renderBody(q, st)}
             ${feedback(st)}
             <div class="actions">${actionBtn(q, st)}</div>
@@ -511,7 +528,7 @@
     if (q.t === 'build') ready = st.picked.length > 0;
     if (q.t === 'order') ready = st.picked.length === q.pool.length;
     if (q.t === 'tap') ready = st.sel.length > 0;
-    if (q.t === 'type') ready = st.typed.trim().length > 0;
+    if (q.t === 'type' || q.t === 'spell') ready = st.typed.trim().length > 0;
     return `<button class="btn primary big" data-act="check" ${ready ? '' : 'disabled'}>Check</button>`;
   }
 
@@ -567,6 +584,20 @@
             return `<button class="tapw ${cls}" data-act="tapWord" data-i="${i}" ${st.done ? 'disabled' : ''}>${esc(w)}</button>`;
           }).join('')}</div>`;
       }
+      case 'spell': {
+        const shown = st.done ? q.a : '';
+        return `<div class="bee-tools">
+            <button class="btn bee" data-act="sayWord">🔊 Say it</button>
+            <button class="btn bee" data-act="sayWordSlow">🐢 Slow</button>
+            <button class="btn bee" data-act="beeSentence">📖 Sentence</button>
+            <button class="btn bee" data-act="beeDef">💡 Meaning</button>
+          </div>
+          ${st.showSent || st.done ? `<p class="bee-line"><b>Sentence:</b> ${esc(st.done ? q.sentence : q.masked)}</p>` : ''}
+          ${st.showDef || st.done ? `<p class="bee-line"><b>Meaning:</b> ${esc(q.def)}</p>` : ''}
+          ${q.hints && !st.done ? `<div class="letter-boxes" aria-label="${q.a.length} letters">${[...q.a].map((c, i) => `<span>${i === 0 ? esc(c) : ''}</span>`).join('')}</div>` : ''}
+          ${shown ? `<div class="letter-boxes done">${[...shown].map((c) => `<span>${esc(c)}</span>`).join('')}</div>` : ''}
+          <input id="typeAns" class="input big-input spell-input" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" value="${esc(st.typed)}" ${st.done ? 'disabled' : ''} placeholder="Type the word">`;
+      }
       case 'type':
         return `<input id="typeAns" class="input big-input" autocomplete="off" autocapitalize="off" spellcheck="false" value="${esc(st.typed)}" ${st.done ? 'disabled' : ''} placeholder="Type here">`;
       default: return '';
@@ -589,7 +620,8 @@
       });
       inp.addEventListener('keydown', (e) => { if (e.key === 'Enter' && inp.value.trim()) check(); });
     }
-    if (settings.autoRead && !Q.st.msg && !Q.st.readOnce) { Q.st.readOnce = true; setTimeout(() => readQuestion(q), 250); }
+    if (q.t === 'spell' && !Q.st.readOnce) { Q.st.readOnce = true; setTimeout(() => Voice.say(q.say), 300); }
+    else if (settings.autoRead && !Q.st.msg && !Q.st.readOnce) { Q.st.readOnce = true; setTimeout(() => readQuestion(q), 250); }
   };
 
   const readQuestion = (q) => Voice.say(Voice.build.question(q));
@@ -696,6 +728,7 @@
     });
     if (q.t === 'tap') q.a.forEach((i) => steps.push({ sel: `.tapw[data-i="${i}"]`, apply: (st) => { st.sel.push(i); } }));
     if (q.t === 'type') [...q.a[0]].forEach((_, n) => steps.push({ sel: '#typeAns', apply: (st) => { st.typed = q.a[0].slice(0, n + 1); }, sound: 'typeKey', after: 140, still: n > 0 }));
+    if (q.t === 'spell') [...q.a].forEach((_, n) => steps.push({ sel: '#typeAns', apply: (st) => { st.typed = q.a.slice(0, n + 1); }, sound: 'typeKey', after: 220, still: n > 0 }));
     return steps;
   }
 
@@ -761,7 +794,7 @@
   function screenVideos() {
     const vids = VIDS();
     const watched = vids.filter((v) => (P.watched || {})[v.id]).length;
-    const groups = [['mix', 'Getting started'], ['phonics', 'Phonics'], ['grammar', 'Grammar'], ['reading', 'Reading'], ['writing', 'Writing']];
+    const groups = [['mix', 'Getting started'], ['phonics', 'Phonics'], ['spelling', 'Spelling Bee'], ['grammar', 'Grammar'], ['reading', 'Reading'], ['vocab', 'Vocabulary'], ['writing', 'Writing']];
     return `
       <h1 class="page-h">Video lessons</h1>
       <p class="lead">Short lessons with pictures, sounds, and read-along words. Watch one, then practice the skill. You have watched ${watched} of ${vids.length}.</p>
@@ -888,6 +921,7 @@
         <label class="toggle"><input type="checkbox" id="setUnlock" data-set="unlockAll" ${settings.unlockAll ? 'checked' : ''}><span>Unlock all levels (skip ahead to Grade 3 work)</span></label>
         <p class="fine">Normally a level unlocks after scoring 70% or more on the level before it.</p>
         <button class="btn" data-act="nav" data-to="players">Manage players</button>
+        ${oldBeePlayers().length ? `<button class="btn" data-act="askBeeImport">🐝 Import from Spelling Bee Trainer</button>` : ''}
         ${classes.map((c) => `<button class="btn" data-act="openDashboard" data-c="${c.id}">🏫 ${esc(c.name)} dashboard</button>`).join('')}
         ${Cloud.available ? '<button class="btn ghost" data-act="nav" data-to="classCreate">Create a class</button>' : ''}
         <button class="btn danger" data-act="askReset">Reset ${esc(me().name)}'s progress</button>
@@ -1368,6 +1402,8 @@
     sayWord: () => Voice.say(cur().say),
     sayWordSlow: () => Voice.say(cur().say, { kind: 'slow' }),
     sayText: (ds) => speak(ds.v),
+    beeSentence: () => { Q.st.showSent = true; Voice.say(cur().sentence); render(); },
+    beeDef: () => { Q.st.showDef = true; Voice.say(cur().def); render(); },
     readPassage: () => Voice.say(Voice.build.passage(cur().passage)),
     sortPick: (ds, el, e) => {
       e.stopPropagation();
@@ -1468,9 +1504,39 @@
     deleteWriting: (ds) => { const [w] = P.writings.splice(+ds.i, 1); if (w) P.gone = [...(P.gone || []), w.id || `${w.date}|${w.title}`].slice(-400); save(); go('studio'); },
   };
 
+  // ---------- import from the old Spelling Bee Trainer (same site, so same browser storage) ----------
+  function oldBeePlayers() {
+    const list = store.get('bee_profiles', []);
+    const out = list.map((p) => ({ id: p.id, name: p.name, avatar: p.avatar, stats: store.get(`bee_${p.id}_wordStats`, {}) }));
+    const legacy = store.get('bee_wordStats', null);
+    if (legacy) out.push({ id: 'legacy', name: 'Spelling Bee player', avatar: '🐝', stats: legacy });
+    return out.filter((p) => Object.keys(p.stats || {}).length);
+  }
+
   // ---------- class & sync actions ----------
   const val = (id) => ((document.getElementById(id) || {}).value || '').trim();
   Object.assign(ACT, {
+    askBeeImport: () => {
+      const list = oldBeePlayers();
+      modal = `<h2>🐝 Import spelling progress</h2><p>Pick the Spelling Bee Trainer player whose words should be added to <b>${esc(me().name)}</b>. Words already practiced here are kept; the import only adds.</p>
+        <div class="stack">${list.map((p) => { const n = Object.keys(p.stats).length, m = Object.values(p.stats).filter((x) => x.mastered || x.streak >= 2).length; return `<button class="player" data-act="beeImport" data-id="${esc(p.id)}"><span class="av">${esc(p.avatar || '🐝')}</span><span><b>${esc(p.name)}</b><small>${n} words practiced · ${m} mastered</small></span></button>`; }).join('')}</div>
+        <div class="row end"><button class="btn ghost" data-act="closeModal">Cancel</button></div>`;
+      render();
+    },
+    beeImport: (ds) => {
+      const src = oldBeePlayers().find((p) => p.id === ds.id);
+      if (!src) return;
+      P.words = P.words || {};
+      let added = 0;
+      Object.entries(src.stats).forEach(([w, o]) => {
+        const mine = P.words[w];
+        const conv = { right: o.right || 0, wrong: o.wrong || 0, streak: o.streak || 0, mastered: !!(o.mastered || (o.streak || 0) >= 2), last: o.lastSeen ? String(o.lastSeen).slice(0, 10) : null };
+        if (!mine || conv.right + conv.wrong > mine.right + mine.wrong) { P.words[w] = conv; added++; }
+      });
+      checkBadges(); save();
+      modal = `<h2>Imported ✓</h2><p>Added ${added} words from ${esc(src.name)}'s Spelling Bee progress. Words they missed will come up first in Spelling Bee quests.</p><div class="row end"><button class="btn primary" data-act="closeModal">Great</button></div>`;
+      SFX.play('unlock'); render();
+    },
     joinClass: async () => {
       const code = Cloud.cleanCode(val('joinCode') || view.code || (location.hash.startsWith('#join-') ? location.hash.slice(6) : ''));
       view.code = code;

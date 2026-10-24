@@ -86,4 +86,29 @@ const LESSONS = {
   'paragraph.0': { rule: 'A topic sentence tells what the whole paragraph is about. It usually comes first.', ex: 'I love fall. (topic) The leaves turn gold. (detail)', video: 'opinion' },
   'paragraph.1': { rule: 'A paragraph goes in order: topic sentence, details, closing sentence.', ex: 'Topic → Detail → Detail → Closing', video: 'opinion' },
   'paragraph.2': { rule: 'Strong paragraphs use linking words, stay on topic, and end with a conclusion.', ex: 'First… Then… Finally… That is why…', video: 'opinion' },
+  // ---- Vocabulary ----
+  'meanings.0': { rule: 'Every word has a meaning. When you know what a word means, you can understand and use it.', ex: 'enormous = very, very big · tiny = very small', video: 'synonyms' },
+  'meanings.1': { rule: 'Try each word in the blank. The right word makes the sentence make sense.', ex: 'Be ___ when you pet the kitten. → gentle' },
+  'meanings.2': { rule: 'Grade 3 words are often fancier ways to say simple ideas.', ex: 'cautious = careful · fragile = easy to break · observe = watch' },
+  'synonyms.0': { rule: 'Synonyms are words that mean the same, or almost the same, thing.', ex: 'big = large · glad = happy · quick = fast', video: 'synonyms' },
+  'synonyms.1': { rule: 'Some words mean the same, and some mean the opposite. Sort them!', ex: 'tiny: little (same) · huge (opposite)', video: 'synonyms' },
+  'synonyms.2': { rule: 'Strong writers use synonyms so they do not repeat the same word.', ex: 'rapid = swift · sturdy = strong · scarce = rare', video: 'synonyms' },
+  'antonyms.0': { rule: 'Antonyms are words that mean the opposite.', ex: 'hot ↔ cold · tiny ↔ huge · begin ↔ finish', video: 'synonyms' },
+  'antonyms.1': { rule: 'Look for the word that means the opposite, not the same.', ex: 'noisy ↔ quiet · neat ↔ messy', video: 'synonyms' },
+  'antonyms.2': { rule: 'Grade 3 words have opposites too.', ex: 'fragile ↔ sturdy · plentiful ↔ scarce · ancient ↔ modern', video: 'synonyms' },
+  'shades.0': { rule: 'Some words mean almost the same thing, but one is stronger. Put them in order from softest to strongest.', ex: 'whisper → talk → shout' },
+  'shades.1': { rule: 'Verbs can be stronger or weaker too.', ex: 'toss → throw → hurl · nibble → eat → gobble' },
+  'shades.2': { rule: 'Choose the word that shows exactly how strong something is.', ex: 'breeze → wind → gale · annoyed → angry → furious' },
+  'multimeaning.0': { rule: 'Some words have more than one meaning. The other words in the sentence tell you which meaning is right.', ex: 'A bat flew at night. · I hit the ball with a bat.' },
+  'multimeaning.1': { rule: 'Read the whole sentence before you decide what the word means.', ex: 'A big wave hit the beach. · Wave goodbye!' },
+  'multimeaning.2': { rule: 'Grade 3 words with two meanings need careful reading.', ex: 'The pitcher threw the ball. · Pour juice from the pitcher.' },
+  'reallife.0': { rule: 'Connect words to real life. Think about things you have seen, tasted, or heard.', ex: 'A carrot is crunchy. · A library is a place to whisper.' },
+  'reallife.1': { rule: 'Words can describe how people act.', ex: 'Saying "please" and "thank you" is polite.' },
+  'reallife.2': { rule: 'Use Grade 3 words to describe real things.', ex: 'An egg is fragile. · A brick wall is sturdy.' },
 };
+// Spelling Bee lessons are the same for every word list.
+['starter', 'buildingup', 'beechallenge', 'trickyspellers', 'onebee1', 'onebee2'].forEach((id) => {
+  LESSONS[`${id}.0`] = { rule: 'Look at the word, say it, and build it letter by letter. Say each sound as you tap its letter.', ex: 'Look · Say · Build · Check', video: 'spelling' };
+  LESSONS[`${id}.1`] = { rule: 'Listen to the word. Tap Sentence or Meaning if you need help. The boxes show how many letters it has.', ex: 'f _ _ _ → frog', video: 'spelling' };
+  LESSONS[`${id}.2`] = { rule: 'This is just like a real spelling bee. Listen carefully, picture the word, then spell it with no hints.', ex: 'Say it · Picture it · Spell it', video: 'spelling' };
+});

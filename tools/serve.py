@@ -55,4 +55,7 @@ class RangeHandler(SimpleHTTPRequestHandler):
 
 if __name__ == '__main__':
     port = int(sys.argv[1]) if len(sys.argv) > 1 else 4181
-    ThreadingHTTPServer(('', port), partial(RangeHandler, directory=ROOT)).serve_forever()
+    class Server(ThreadingHTTPServer):
+        request_queue_size = 128  # the page loads ~20 files at once; the default backlog of 5 drops connections
+        daemon_threads = True
+    Server(('', port), partial(RangeHandler, directory=ROOT)).serve_forever()

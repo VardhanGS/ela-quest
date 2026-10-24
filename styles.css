@@ -13,6 +13,8 @@
   --reading: #2b5fd0;
   --writing: #c42f69;
   --mix: #6a4fd0;
+  --spelling: #b07800;
+  --vocab: #0d8585;
   --gold: #f2b01e;
   --good: #1c8f50;
   --bad: #cf3442;
@@ -25,14 +27,14 @@
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     --paper: #142019; --surface: #1d2c25; --ink: #eef4ec; --muted: #a8b8ad; --line: #2c3f36; --rule: #2f463b; --rule-mid: #5a3c40;
-    --phonics: #ff9a48; --grammar: #52c985; --reading: #79a0ff; --writing: #f2709f; --mix: #a58cff; --gold: #ffd25a; --good: #52c985; --bad: #ff707b;
+    --phonics: #ff9a48; --grammar: #52c985; --reading: #79a0ff; --writing: #f2709f; --mix: #a58cff; --spelling: #f2bd3c; --vocab: #3cc9c9; --gold: #ffd25a; --good: #52c985; --bad: #ff707b;
     --shadow: 0 1px 0 rgba(0, 0, 0, 0.3), 0 8px 20px -10px rgba(0, 0, 0, 0.6);
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
   --paper: #142019; --surface: #1d2c25; --ink: #eef4ec; --muted: #a8b8ad; --line: #2c3f36; --rule: #2f463b; --rule-mid: #5a3c40;
-  --phonics: #ff9a48; --grammar: #52c985; --reading: #79a0ff; --writing: #f2709f; --mix: #a58cff; --gold: #ffd25a; --good: #52c985; --bad: #ff707b;
+  --phonics: #ff9a48; --grammar: #52c985; --reading: #79a0ff; --writing: #f2709f; --mix: #a58cff; --spelling: #f2bd3c; --vocab: #3cc9c9; --gold: #ffd25a; --good: #52c985; --bad: #ff707b;
   --shadow: 0 1px 0 rgba(0, 0, 0, 0.3), 0 8px 20px -10px rgba(0, 0, 0, 0.6);
   color-scheme: dark;
 }
@@ -66,6 +68,8 @@ p { margin: 0; }
 .s-reading { --c: var(--reading); }
 .s-writing, .s-studio { --c: var(--writing); }
 .s-mix { --c: var(--mix); }
+.s-spelling { --c: var(--spelling); }
+.s-vocab { --c: var(--vocab); }
 .tint { background: color-mix(in srgb, var(--c) 12%, var(--surface)); }
 
 #app { min-height: 100dvh; display: flex; flex-direction: column; }
@@ -599,3 +603,14 @@ input[type="range"] { width: 100%; accent-color: var(--reading); }
 .meter.mini { display: inline-block; width: 60px; height: 8px; vertical-align: middle; margin-right: 6px; }
 .wpiece summary { cursor: pointer; padding: 8px 0; }
 .wpiece .paper-view { margin-top: 8px; }
+
+/* ---------- spelling bee ---------- */
+.bee-tools { display: flex; flex-wrap: wrap; gap: 8px; }
+.btn.bee { background: color-mix(in srgb, var(--c) 12%, var(--surface)); border-color: color-mix(in srgb, var(--c) 40%, var(--line)); }
+.bee-line { padding: 8px 12px; border-radius: 10px; background: var(--paper); border: 1px solid var(--line); }
+.letter-boxes { display: flex; flex-wrap: wrap; gap: 6px; justify-content: center; }
+.letter-boxes span { width: 40px; height: 48px; border-radius: 10px; border: 2px solid color-mix(in srgb, var(--c) 50%, var(--line)); display: grid; place-items: center; font-size: 1.5rem; font-weight: 700; background: var(--surface); text-transform: lowercase; }
+.letter-boxes.done span { background: color-mix(in srgb, var(--good) 15%, var(--surface)); border-color: var(--good); }
+.spell-input { letter-spacing: 0.08em; }
+.words-count { font-family: var(--f-body); font-weight: 400; font-size: 0.85rem; margin-left: 8px; }
+@media (max-width: 560px) { .letter-boxes span { width: 32px; height: 40px; font-size: 1.2rem; } }

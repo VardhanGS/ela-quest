@@ -158,3 +158,36 @@ VIDEOS = [
         ],
     },
 ]
+
+VIDEOS += [
+    {
+        'id': 'spelling', 'title': 'How to Study Spelling Words', 'subject': 'spelling', 'label': 'Spelling Bee',
+        'desc': 'Look, say, cover, write, check, plus tips for a real spelling bee.', 'practice': ['spelling', 'starter', 0],
+        'scenes': [
+            {'type': 'title', 'emoji': '🐝', 'title': 'How to Study Spelling Words', 'sub': 'Spelling Bee · Learn any word', 'beats': [B("Let's learn a trick that helps you spell any word.")]},
+            {'type': 'boxes', 'boxes': [('1 · Look', '👀', 'Look closely at every letter.', 'spelling'), ('2 · Say', '🗣️', 'Say the word and each sound.', 'spelling'), ('3 · Cover', '🙈', 'Cover the word so you cannot see it.', 'spelling'), ('4 · Write & check', '✍️', 'Write it, then check each letter.', 'spelling')],
+             'beats': [B('Use these four steps to study a word.'), B('First, look closely at every letter.'), B('Next, say the word, and listen to each sound.'), B('Then, cover the word so you cannot see it.'), B('Last, write it from memory, and check each letter.')]},
+            {'type': 'wordmath', 'heading': 'Break long words into parts', 'rows': [('birth', '+', 'day', 'birthday', 'two small words'), ('sand', '+', 'wich', 'sandwich', 'two syllables'), ('li', '+', 'brary', 'library', 'li - brar - y')],
+             'beats': [B('Long words are easier in small parts.'), B('Birth, plus day, makes birthday.'), B('Sand, plus wich, makes sandwich.'), B('Library has three parts. Li, brar, ee.', 'Library has three parts. Lie, brare, ee.')]},
+            {'type': 'bullets', 'heading': 'Spelling bee tips', 'items': [('👂', 'Listen to the whole word'), ('📖', 'Ask to hear it in a sentence'), ('💡', 'Ask what it means'), ('🧠', 'Picture it, then spell slowly')],
+             'beats': [B('In a spelling bee, you can use these tips.'), B('Listen carefully to the whole word.'), B('Ask to hear the word in a sentence.'), B('Ask what the word means.'), B('Then picture the word, and spell it slowly, one letter at a time.')]},
+            quiz('Which spelling is correct?', ['frend', 'friend', 'freind'], 'friend', 'Which spelling is correct? Look at each one carefully.', 'Friend! Remember: i before e, and the word end is hiding inside.', reveal_say='Friend! Remember, I before E, and the word, end, is hiding inside.'),
+            outro('Practice your words in Spelling Bee!'),
+        ],
+    },
+    {
+        'id': 'synonyms', 'title': 'Synonyms, Antonyms, and Shades of Meaning', 'subject': 'vocab', 'label': 'Vocabulary',
+        'desc': 'Words that mean the same, words that mean the opposite, and words that are stronger.', 'practice': ['vocab', 'synonyms', 0],
+        'scenes': [
+            {'type': 'title', 'emoji': '💬', 'title': 'Synonyms and Antonyms', 'sub': 'Vocabulary · Word partners', 'beats': [B('Words have partners. Some mean the same, and some mean the opposite.')]},
+            {'type': 'beforeafter', 'heading': 'Synonyms mean the SAME', 'pairs': [('big', 'large'), ('glad', 'happy'), ('quick', 'fast')],
+             'beats': [B('Synonyms are words that mean the same thing.'), B('Big, and large.'), B('Glad, and happy.'), B('Quick, and fast.')]},
+            {'type': 'beforeafter', 'heading': 'Antonyms mean the OPPOSITE', 'pairs': [('hot', 'cold'), ('tiny', 'huge'), ('begin', 'finish')],
+             'beats': [B('Antonyms are words that mean the opposite.'), B('Hot, and cold.'), B('Tiny, and huge.'), B('Begin, and finish.')]},
+            {'type': 'bullets', 'heading': 'Shades of meaning: soft to strong', 'layout': 'tiles', 'items': [('🤫', 'whisper', 'softest'), ('🙂', 'talk', 'medium'), ('📣', 'shout', 'strongest')],
+             'beats': [B('Some words mean almost the same thing, but one is stronger.'), B('Whisper is very soft.'), B('Talk is in the middle.'), B('Shout is the strongest.')]},
+            quiz('Which word is the OPPOSITE of "noisy"?', ['loud', 'quiet', 'happy'], 'quiet', 'Which word is the opposite of noisy?', 'Quiet! Noisy and quiet are antonyms.'),
+            outro('Practice synonyms and antonyms in Vocabulary!'),
+        ],
+    },
+]
