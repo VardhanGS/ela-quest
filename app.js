@@ -26,8 +26,16 @@
     activeId = id;
     store.set('elaq_active', id);
     P = Object.assign(blankData(), store.get('elaq_p_' + id, {}));
+    lastDraft = JSON.stringify(P.draft);
   }
-  const save = () => { if (activeId) store.set('elaq_p_' + activeId, P); };
+  let lastDraft = null;
+  function save() {
+    if (!activeId || !P) return;
+    const dj = JSON.stringify(P.draft);
+    if (dj !== lastDraft) { if (lastDraft !== null) P.draftAt = Date.now(); lastDraft = dj; }
+    store.set('elaq_p_' + activeId, P);
+    if (me() && me().cloud) queuePush();
+  }
   const saveSettings = () => store.set('elaq_settings', settings);
   const saveProfiles = () => store.set('elaq_profiles', profiles);
   const me = () => profiles.find((p) => p.id === activeId);
@@ -128,7 +136,7 @@
   function go(name, params = {}) {
     Voice.stop();
     view = { name, ...params };
-    modal = null;
+    modal = null; pin = null;
     render();
     window.scrollTo(0, 0);
   }
@@ -136,7 +144,10 @@
   const NAV = [['home', '🏠', 'Home'], ['studio', '🖍️', 'Write'], ['videos', '🎬', 'Videos'], ['progress', '📈', 'Progress'], ['settings', '⚙️', 'Settings']];
 
   function render() {
-    if (!profiles.length || !P || view.name === 'welcome') { app.innerHTML = screenWelcome(); AFTER.welcome(); return; }
+    const noUser = !profiles.length || !P;
+    const open = ['classCreate', 'classPick', 'dashboard', 'studentView'].includes(view.name);
+    if (view.name === 'welcome' || (noUser && !open)) { app.innerHTML = screenWelcome() + modalHTML(); AFTER.welcome(); return; }
+    if (noUser) { app.innerHTML = `<main class="main">${SCREENS[view.name]()}</main>` + modalHTML(); AFTER[view.name] && AFTER[view.name](); return; }
     const focus = ['quiz', 'results', 'example'].includes(view.name);
     const body = SCREENS[view.name] ? SCREENS[view.name]() : SCREENS.home();
     const active = view.name === 'video' ? 'videos' : view.name === 'subject' ? 'home' : ['studioNew', 'studioEdit', 'writingView'].includes(view.name) ? 'studio' : view.name;
@@ -144,10 +155,12 @@
       ${focus ? '' : topbar()}
       <main class="main ${focus ? 'focus' : ''}">${body}</main>
       ${focus ? '' : `<nav class="tabbar" aria-label="Main">${NAV.map(([id, ic, label]) => `<button class="tab ${active === id ? 'on' : ''}" data-act="nav" data-to="${id}"><span class="tab-ic" aria-hidden="true">${ic}</span><span>${label}</span></button>`).join('')}</nav>`}
-      ${modal ? `<div class="scrim" data-act="closeModal"></div><div class="modal" role="dialog" aria-modal="true">${modal}</div>` : ''}`;
+      ${modalHTML()}`;
     AFTER[view.name] && AFTER[view.name]();
     SFX.syncMusic(['quiz', 'example', 'video'].includes(view.name));
   }
+
+  const modalHTML = () => (modal ? `<div class="scrim" data-act="closeModal"></div><div class="modal" role="dialog" aria-modal="true">${modal}</div>` : '');
 
   function topbar() {
     const p = me();
@@ -155,6 +168,7 @@
     return `<header class="topbar">
       <button class="brand" data-act="nav" data-to="home" aria-label="ELA Quest home"><span class="brand-word">ELA Quest</span><span class="brand-sub">Grade 2 → 3</span></button>
       <div class="top-right">
+        ${p.cloud ? `<span class="pill sync" id="syncPill" title="${esc(SYNC_LABEL[sync.state])}">${SYNC_ICON[sync.state]}</span>` : ''}
         <span class="pill streak" title="Days in a row">🔥 <b>${streakNow()}</b></span>
         <span class="pill xp" title="Level ${playerLevel()}: ${into}/${XP_PER} XP"><b>Lv ${playerLevel()}</b><span class="xpbar"><i style="width:${(into / XP_PER) * 100}%"></i></span></span>
         <button class="chip-me" data-act="nav" data-to="players"><span class="av">${p.avatar}</span><span class="nm">${esc(p.name)}</span></button>
@@ -167,8 +181,9 @@
     const pick = view.avatar || AVATARS[0];
     return `<main class="main welcome">
       <div class="paper-title"><h1>ELA Quest</h1><p>Phonics · Grammar · Reading · Writing</p></div>
+      ${classCard()}
       <section class="card stack">
-        <h2>Who is learning today?</h2>
+        <h2>${Cloud.available ? '📱 Play on this device only' : 'Who is learning today?'}</h2>
         <label class="lbl" for="newName">Your name</label>
         <input id="newName" class="input" maxlength="16" placeholder="Type your name" value="${esc(view.typed || '')}" autocomplete="off">
         <span class="lbl">Pick a buddy</span>
@@ -176,7 +191,7 @@
         <button class="btn primary big" data-act="createPlayer">Start my quest</button>
         ${profiles.length ? '<button class="btn ghost" data-act="nav" data-to="players">Back to players</button>' : ''}
       </section>
-      <p class="fine">Progress is saved on this device. Grown-ups can add more players later.</p>
+      <p class="fine">${Cloud.available ? 'Class players sync to every device. Device-only players are saved just here.' : 'Progress is saved on this device. Grown-ups can add more players later.'}</p>
     </main>`;
   }
 
@@ -379,7 +394,7 @@
       SFX.play(first ? 'firstTry' : 'correct');
       if (settings.sayPraise) setTimeout(() => speak(st.msg.title.replace(/ \(2nd try\)/, '')), 250);
       Q.log.push({ q, ok: true, first });
-      if (Q.mode === 'review') { P.missed = P.missed.filter((m) => m.id !== q._mid); P.fixed++; }
+      if (Q.mode === 'review') { P.missed = P.missed.filter((m) => m.id !== q._mid); P.gone = [...(P.gone || []), q._mid].slice(-400); P.fixed++; }
     } else {
       st.tries++;
       SFX.play(st.tries === 1 ? 'tryAgain' : 'wrong');
@@ -793,7 +808,7 @@
   };
 
   // ---------- progress ----------
-  function screenProgress() {
+  function screenProgress(who = me().name, readOnly = false) {
     const r = readiness();
     const days = [...Array(7)].map((_, i) => { const d = new Date(); d.setDate(d.getDate() - (6 - i)); const k = dayKey(d); return { k, label: d.toLocaleDateString('en-US', { weekday: 'short' }), ...(P.daily[k] || { q: 0, correct: 0, rounds: 0 }) }; });
     const maxQ = Math.max(8, ...days.map((d) => d.q));
@@ -803,7 +818,7 @@
     const weak = played.filter((x) => x.b < 70).sort((a, b) => a.b - b.b).slice(0, 5);
     const strong = played.filter((x) => x.b >= 90).sort((a, b) => b.l - a.l || b.b - a.b).slice(0, 5);
     return `
-      <h1 class="page-h">${esc(me().name)}'s progress</h1>
+      ${readOnly ? '' : `<h1 class="page-h">${esc(who)}'s progress</h1>`}
       <section class="stats">
         <div class="stat"><b>${P.xp}</b><span>Total XP</span></div>
         <div class="stat"><b>${P.quests}</b><span>Quests done</span></div>
@@ -819,7 +834,7 @@
 
       <section class="grid2">
         <div class="card"><h2>Strengths</h2>${strong.length ? `<ul class="plain">${strong.map((x) => `<li><span class="dot s-${x.s.color}"></span>${x.k.name} · ${LEVEL_NAMES[x.l].long} <b>${x.b}%</b></li>`).join('')}</ul>` : '<p class="muted">Score 90% or more on a level to see it here.</p>'}</div>
-        <div class="card"><h2>Needs practice</h2>${weak.length ? `<ul class="plain">${weak.map((x) => `<li><button class="link" data-act="start" data-s="${x.s.id}" data-k="${x.k.id}" data-l="${x.l}"><span class="dot s-${x.s.color}"></span>${x.k.name} · ${LEVEL_NAMES[x.l].long} <b>${x.b}%</b></button></li>`).join('')}</ul>` : '<p class="muted">Nothing below 70% right now.</p>'}</div>
+        <div class="card"><h2>Needs practice</h2>${weak.length ? `<ul class="plain">${weak.map((x) => `<li>${readOnly ? `<span class="dot s-${x.s.color}"></span>${x.k.name} · ${LEVEL_NAMES[x.l].long} <b>${x.b}%</b>` : `<button class="link" data-act="start" data-s="${x.s.id}" data-k="${x.k.id}" data-l="${x.l}"><span class="dot s-${x.s.color}"></span>${x.k.name} · ${LEVEL_NAMES[x.l].long} <b>${x.b}%</b></button>`}</li>`).join('')}</ul>` : '<p class="muted">Nothing below 70% right now.</p>'}</div>
       </section>
 
       <section class="card">
@@ -828,7 +843,7 @@
         <div class="map">${SUBJECTS.map((s) => `
           <div class="map-sub s-${s.color}">
             <h3>${s.icon} ${s.name} <small>${mastery(s)}%</small></h3>
-            ${s.skills.map((k) => `<div class="map-row"><span class="map-name">${k.name}</span>${k.levels.map((L, l) => { const b = best(s.id, k.id, l); const st = starsFor(b); return `<button class="cell c${st} ${unlocked(s.id, k.id, l) ? '' : 'locked'}" data-act="start" data-s="${s.id}" data-k="${k.id}" data-l="${l}" title="${LEVEL_NAMES[l].long}: ${esc(L.title)} (${L.std})">${b == null ? (unlocked(s.id, k.id, l) ? '–' : '🔒') : '★'.repeat(st) || b + '%'}</button>`; }).join('')}</div>`).join('')}
+            ${s.skills.map((k) => `<div class="map-row"><span class="map-name">${k.name}</span>${k.levels.map((L, l) => { const b = best(s.id, k.id, l); const st = starsFor(b); return `<button class="cell c${st} ${unlocked(s.id, k.id, l) ? '' : 'locked'}" ${readOnly ? 'disabled' : 'data-act="start"'} data-s="${s.id}" data-k="${k.id}" data-l="${l}" title="${LEVEL_NAMES[l].long}: ${esc(L.title)} (${L.std})">${b == null ? (unlocked(s.id, k.id, l) ? '–' : '🔒') : '★'.repeat(st) || b + '%'}</button>`; }).join('')}</div>`).join('')}
           </div>`).join('')}</div>
       </section>
 
@@ -873,24 +888,40 @@
         <label class="toggle"><input type="checkbox" id="setUnlock" data-set="unlockAll" ${settings.unlockAll ? 'checked' : ''}><span>Unlock all levels (skip ahead to Grade 3 work)</span></label>
         <p class="fine">Normally a level unlocks after scoring 70% or more on the level before it.</p>
         <button class="btn" data-act="nav" data-to="players">Manage players</button>
+        ${classes.map((c) => `<button class="btn" data-act="openDashboard" data-c="${c.id}">🏫 ${esc(c.name)} dashboard</button>`).join('')}
+        ${Cloud.available ? '<button class="btn ghost" data-act="nav" data-to="classCreate">Create a class</button>' : ''}
         <button class="btn danger" data-act="askReset">Reset ${esc(me().name)}'s progress</button>
       </section>
       <p class="fine center">ELA Quest covers Grade 2 Common Core reading foundations, language, reading, and writing standards, with a Grade 3 Challenge level for every skill.</p>`;
   }
 
   function screenPlayers() {
+    const row = (p) => {
+      const d = store.get('elaq_p_' + p.id, {});
+      return `<li class="${p.id === activeId ? 'on' : ''}">
+        <button class="player" data-act="switchPlayer" data-id="${p.id}"><span class="av">${p.avatar}</span><span><b>${esc(p.name)}</b><small>${d.xp || 0} XP · ${d.quests || 0} quests${p.cloud ? ' · 🔒 PIN' : ''}</small></span>${p.id === activeId ? '<span class="tag">Playing</span>' : ''}</button>
+        ${p.cloud ? '' : `<button class="icon-btn" data-act="askDeletePlayer" data-id="${p.id}" aria-label="Delete ${esc(p.name)}">🗑️</button>`}
+      </li>`;
+    };
+    const locals = profiles.filter((p) => !p.cloud);
     return `
       <h1 class="page-h">Players</h1>
-      <section class="card">
-        <ul class="players">${profiles.map((p) => {
-          const d = store.get('elaq_p_' + p.id, {});
-          return `<li class="${p.id === activeId ? 'on' : ''}">
-            <button class="player" data-act="switchPlayer" data-id="${p.id}"><span class="av">${p.avatar}</span><span><b>${esc(p.name)}</b><small>${d.xp || 0} XP · ${d.quests || 0} quests</small></span>${p.id === activeId ? '<span class="tag">Playing</span>' : ''}</button>
-            <button class="icon-btn" data-act="askDeletePlayer" data-id="${p.id}" aria-label="Delete ${esc(p.name)}">🗑️</button>
-          </li>`;
-        }).join('')}</ul>
-        <button class="btn primary" data-act="newPlayer">+ Add a player</button>
-      </section>`;
+      ${classes.map((c) => {
+        const here = profiles.filter((p) => p.cloud && p.cloud.classId === c.id);
+        return `<section class="card stack">
+          <div class="row-between"><h2>🏫 ${esc(c.name)}</h2><span class="muted">Syncs to every device</span></div>
+          ${here.length ? `<ul class="players">${here.map(row).join('')}</ul>` : '<p class="muted">No one from this class has signed in on this device yet.</p>'}
+          <div class="row"><button class="btn primary" data-act="openClass" data-c="${c.id}">Sign in a student</button><button class="btn" data-act="openDashboard" data-c="${c.id}">Grown-ups: dashboard</button><button class="btn ghost" data-act="leaveClass" data-c="${c.id}">Forget on this device</button></div>
+        </section>`;
+      }).join('')}
+      <section class="card stack">
+        <h2>📱 This device only</h2>
+        ${locals.length ? `<ul class="players">${locals.map(row).join('')}</ul>` : '<p class="muted">No device-only players.</p>'}
+        <div class="row"><button class="btn" data-act="newPlayer">+ Add a device-only player</button></div>
+        ${locals.length && classes.length ? '<p class="fine">To move a device-only player into a class, sign in to the class, tap "I\'m new here", and choose them under "Bring progress".</p>' : ''}
+      </section>
+      ${Cloud.available ? `<section class="card stack"><h2>Classes</h2><p class="muted">Join a class so a student's progress follows them to any device, or create one as a parent or teacher.</p>
+        <div class="row"><button class="btn" data-act="nav" data-to="welcome">Join a class</button><button class="btn" data-act="nav" data-to="classCreate">Create a class</button></div></section>` : ''}`;
   }
 
   // ---------- writing studio ----------
@@ -1047,6 +1078,259 @@
       </section>`;
   }
 
+  // ---------- classes & cloud sync ----------
+  // Cloud students are profiles with `cloud: {classId, sid, className}`. Progress is saved on the device first,
+  // then pushed to the class (debounced); it is pulled and merged on sign-in, on app start, and when the app
+  // comes back to the foreground, so progress made on another device shows up.
+  const SYNC_ICON = { idle: '☁️', saving: '⏳', saved: '☁️✓', offline: '⚠️' };
+  const SYNC_LABEL = { idle: 'Synced with your class', saving: 'Saving to your class…', saved: 'Saved to your class', offline: 'Offline: progress is saved on this device and will sync later' };
+  const sync = { state: 'idle', timer: null, dirty: false, busy: false };
+  let classes = store.get('elaq_classes', []); // classes this device has joined: [{id, name}]
+  const adminOK = new Set(); // classes unlocked with the grown-up PIN this session
+  const saveClasses = () => store.set('elaq_classes', classes);
+  const rememberClass = (c) => { if (!classes.some((x) => x.id === c.id)) { classes.push({ id: c.id, name: c.name }); saveClasses(); } };
+
+  function setSync(state) {
+    sync.state = state;
+    const el = document.getElementById('syncPill');
+    if (el) { el.textContent = SYNC_ICON[state]; el.title = SYNC_LABEL[state]; }
+  }
+  function queuePush(delay = 2500) {
+    sync.dirty = true;
+    clearTimeout(sync.timer);
+    sync.timer = setTimeout(push, delay);
+    setSync('saving');
+  }
+  async function push() {
+    const p = me();
+    if (!p || !p.cloud || !sync.dirty || sync.busy) return;
+    sync.busy = true; sync.dirty = false;
+    try { await Cloud.saveStudent(p.cloud.classId, p.cloud.sid, P); setSync('saved'); }
+    catch (e) { if (e.status === 404) studentRemoved(p); else { sync.dirty = true; setSync('offline'); } }
+    finally { sync.busy = false; }
+  }
+  async function pull() {
+    const p = me();
+    if (!p || !p.cloud) return;
+    try {
+      const s = await Cloud.getStudent(p.cloud.classId, p.cloud.sid);
+      if (me() !== p) return;
+      if (!s) { studentRemoved(p); return; }
+      let remote = {};
+      try { remote = JSON.parse(s.data || '{}'); } catch { /* keep local */ }
+      if (s.name && s.name !== p.name) { p.name = s.name; saveProfiles(); }
+      const merged = Object.assign(blankData(), Cloud.merge(P, Object.assign(blankData(), remote)));
+      const changed = JSON.stringify(merged) !== JSON.stringify(P);
+      P = merged;
+      store.set('elaq_p_' + activeId, P);
+      if (JSON.stringify(merged) !== JSON.stringify(Object.assign(blankData(), remote))) queuePush(400); else setSync('saved');
+      if (changed && !['quiz', 'example', 'studioEdit', 'video'].includes(view.name)) render();
+    } catch { setSync('offline'); }
+  }
+  function studentRemoved(p) {
+    profiles = profiles.filter((x) => x.id !== p.id);
+    store.del('elaq_p_' + p.id);
+    saveProfiles();
+    if (profiles.length) loadProfile(profiles[0].id); else { P = null; activeId = null; store.del('elaq_active'); }
+    go(profiles.length ? 'players' : 'welcome');
+    modal = `<h2>${esc(p.name)} was removed</h2><p>A grown-up removed ${esc(p.name)} from ${esc(p.cloud.className || 'the class')}, so this device signed them out.</p><div class="row end"><button class="btn primary" data-act="closeModal">OK</button></div>`;
+    render();
+  }
+  window.addEventListener('online', () => { if (sync.dirty) push(); });
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') pull(); else if (sync.dirty) push(); });
+  setInterval(() => { if (sync.dirty) push(); }, 30000);
+
+  // Evaluate the progress helpers against another student's data (for the dashboard).
+  function withData(data, fn) {
+    const saved = P;
+    P = Object.assign(blankData(), data);
+    try { return fn(); } finally { P = saved; }
+  }
+  function summarize(data) {
+    return withData(data, () => {
+      const days = Object.keys(P.daily).sort();
+      const played = [];
+      SUBJECTS.forEach((s) => s.skills.forEach((k) => k.levels.forEach((L, l) => { const b = best(s.id, k.id, l); if (b != null) played.push({ s, k, l, b }); })));
+      const weak = played.filter((x) => x.b < 70).sort((a, b) => a.b - b.b)[0];
+      const week = days.filter((d) => d >= dayKey(new Date(Date.now() - 6 * 864e5))).reduce((a, d) => a + (P.daily[d].q || 0), 0);
+      return { xp: P.xp, level: playerLevel(), quests: P.quests, streak: streakNow(), ready: readiness().pct, last: days[days.length - 1] || null,
+        week, mastery: Object.fromEntries(SUBJECTS.map((s) => [s.id, mastery(s)])), weak, writings: P.writings.length, badges: Object.keys(P.badges).length };
+    });
+  }
+  const lastSeen = (d) => { if (!d) return 'Not yet'; if (d === dayKey()) return 'Today'; if (d === yesterday()) return 'Yesterday'; return new Date(d + 'T12:00').toLocaleDateString('en-US', { month: 'short', day: 'numeric' }); };
+  const joinLink = (id) => `${location.origin}${location.pathname}#join-${id}`;
+
+  // ---- PIN pad (modal) ----
+  let pin = null; // {title, sub, len, max, entered, err, check(p) -> Promise<bool>, ok()}
+  function pinModal() {
+    const dots = pin.max > pin.len ? pin.entered.length || 1 : pin.len;
+    return `<div class="pinpad">
+      <h2>${esc(pin.title)}</h2>${pin.sub ? `<p class="muted">${esc(pin.sub)}</p>` : ''}
+      <div class="pin-dots ${pin.err ? 'shake' : ''}">${[...Array(Math.max(dots, pin.len))].map((_, i) => `<i class="${i < pin.entered.length ? 'on' : ''}"></i>`).join('')}</div>
+      <p class="pin-err" role="alert">${esc(pin.err || '')}</p>
+      <div class="pin-keys">${[1, 2, 3, 4, 5, 6, 7, 8, 9].map((n) => `<button data-act="pinKey" data-v="${n}">${n}</button>`).join('')}
+        <button data-act="closeModal" class="pin-cancel">Cancel</button><button data-act="pinKey" data-v="0">0</button><button data-act="pinBack" aria-label="Delete">⌫</button></div>
+      ${pin.max > pin.len ? `<button class="btn primary" data-act="pinGo" ${pin.entered.length >= pin.len ? '' : 'disabled'}>OK</button>` : ''}
+    </div>`;
+  }
+  function askPin(opts) { pin = { len: 4, max: 4, entered: '', err: '', ...opts }; modal = pinModal(); render(); }
+  async function pinSubmit() {
+    const ok = await pin.check(pin.entered).catch(() => null);
+    if (ok === null) { pin.err = 'Could not reach the class. Check the internet and try again.'; pin.entered = ''; }
+    else if (!ok) { pin.err = 'That PIN is not right. Try again.'; pin.entered = ''; SFX.play('tryAgain'); }
+    else { const done = pin.ok; pin = null; modal = null; SFX.play('unlock'); done(); return; }
+    modal = pinModal(); render();
+  }
+
+  // ---- screens ----
+  function classCard() {
+    if (!Cloud.available) return '';
+    const code = view.code ?? (location.hash.startsWith('#join-') ? location.hash.slice(6) : '');
+    return `<section class="card stack class-card">
+      <h2>🏫 Join my class</h2>
+      <p class="muted">Your progress follows you to any device. Ask a grown-up for the class code.</p>
+      <label class="lbl" for="joinCode">Class code</label>
+      <input id="joinCode" class="input code-input" maxlength="16" placeholder="XXXX-XXXX-XXXX" value="${esc(code)}" autocomplete="off" autocapitalize="characters" spellcheck="false">
+      <p class="pin-err" id="joinErr" role="alert">${esc(view.joinErr || '')}</p>
+      <button class="btn primary big" data-act="joinClass">Join class</button>
+      ${classes.length ? `<div class="joined">${classes.map((c) => `<button class="chip" data-act="openClass" data-c="${c.id}">🏫 ${esc(c.name)}</button>`).join('')}</div>` : ''}
+      <button class="btn ghost" data-act="nav" data-to="classCreate">Grown-ups: create a class</button>
+    </section>`;
+  }
+
+  function screenClassCreate() {
+    if (view.created) {
+      const c = view.created;
+      return `<div class="narrow"><section class="card stack">
+        <h2>🎉 ${esc(c.name)} is ready</h2>
+        <p>Write down this class code. Students type it once on each device to join.</p>
+        <div class="big-code" id="bigCode">${Cloud.prettyCode(c.id)}</div>
+        <div class="row"><button class="btn" data-act="copyText" data-v="${Cloud.prettyCode(c.id)}">Copy code</button><button class="btn" data-act="copyText" data-v="${esc(joinLink(c.id))}">Copy join link</button></div>
+        <p class="fine">Anyone with this code can see and change progress in the class, so share it only with your family or students. Keep your grown-up PIN private; it opens the dashboard.</p>
+        <button class="btn primary big" data-act="openClass" data-c="${c.id}">Add students →</button>
+      </section></div>`;
+    }
+    return `<div class="narrow"><section class="card stack">
+      <h2>Create a class</h2>
+      <p class="muted">For a parent or teacher. You get a class code to share and a dashboard that shows every student's progress.</p>
+      <label class="lbl" for="className">Class name</label>
+      <input id="className" class="input" maxlength="40" placeholder="Garimella Family, Room 12…" value="${esc(view.cname || '')}">
+      <label class="lbl" for="adminPin">Grown-up PIN (4–6 digits)</label>
+      <input id="adminPin" class="input" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="new-password">
+      <label class="lbl" for="adminPin2">Type the PIN again</label>
+      <input id="adminPin2" class="input" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="6" autocomplete="new-password">
+      <p class="pin-err" role="alert">${esc(view.err || '')}</p>
+      <button class="btn primary big" data-act="createClass" ${view.busy ? 'disabled' : ''}>${view.busy ? 'Creating…' : 'Create class'}</button>
+      <button class="btn ghost" data-act="nav" data-to="${profiles.length ? 'players' : 'welcome'}">Back</button>
+    </section></div>`;
+  }
+
+  function screenClassPick() {
+    const c = classes.find((x) => x.id === view.c) || { id: view.c, name: 'Class' };
+    const list = view.students;
+    const locals = profiles.filter((p) => !p.cloud);
+    if (view.mode === 'new') {
+      const pick = view.avatar || AVATARS[0];
+      return `<div class="narrow"><section class="card stack">
+        <h2>Join ${esc(c.name)}</h2>
+        <label class="lbl" for="stuName">Your first name</label>
+        <input id="stuName" class="input" maxlength="16" value="${esc(view.typed || '')}" autocomplete="off">
+        <span class="lbl">Pick a buddy</span>
+        <div class="avatars">${AVATARS.map((a) => `<button class="av-btn ${a === pick ? 'on' : ''}" data-act="pickAvatar" data-a="${a}">${a}</button>`).join('')}</div>
+        <label class="lbl" for="stuPin">Make a 4-digit PIN (a secret number to sign in)</label>
+        <input id="stuPin" class="input" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="new-password">
+        <label class="lbl" for="stuPin2">Type your PIN again</label>
+        <input id="stuPin2" class="input" type="password" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="new-password">
+        ${locals.length ? `<label class="lbl" for="bringFrom">Bring progress from a player on this device?</label>
+        <select id="bringFrom" class="input"><option value="">No, start fresh</option>${locals.map((p) => `<option value="${p.id}">${esc(p.avatar + ' ' + p.name)} (${(store.get('elaq_p_' + p.id, {}).xp || 0)} XP)</option>`).join('')}</select>` : ''}
+        <p class="pin-err" role="alert">${esc(view.err || '')}</p>
+        <button class="btn primary big" data-act="createStudent" ${view.busy ? 'disabled' : ''}>${view.busy ? 'Joining…' : 'Join the class'}</button>
+        <button class="btn ghost" data-act="pickMode" data-m="">Back</button>
+      </section></div>`;
+    }
+    return `<div class="narrow">
+      <div class="paper-title"><h1>${esc(c.name)}</h1><p>Tap your name to sign in</p></div>
+      <section class="card stack">
+        ${!list ? '<p class="muted center">Loading the class…</p>' : view.err ? `<p class="pin-err">${esc(view.err)}</p><button class="btn" data-act="openClass" data-c="${c.id}">Try again</button>` : `
+        <div class="stu-grid">${list.map((st) => `<button class="stu" data-act="pickStudent" data-sid="${st.id}"><span class="av">${esc(st.avatar || '🦊')}</span><b>${esc(st.name)}</b></button>`).join('')}
+          <button class="stu new" data-act="pickMode" data-m="new"><span class="av">＋</span><b>I'm new here</b></button></div>`}
+        <div class="row">
+          <button class="btn ghost" data-act="nav" data-to="${profiles.length ? 'players' : 'welcome'}">Back</button>
+          <button class="btn ghost" data-act="openDashboard" data-c="${c.id}">Grown-ups: dashboard</button>
+        </div>
+      </section>
+    </div>`;
+  }
+  AFTER.classPick = () => {
+    if (view.students || view.loading || view.mode === 'new') return;
+    view.loading = true;
+    Cloud.listStudents(view.c).then((l) => { view.students = l; view.loading = false; if (view.name === 'classPick') render(); })
+      .catch(() => { view.students = []; view.err = 'Could not load the class. Check the internet and try again.'; view.loading = false; if (view.name === 'classPick') render(); });
+  };
+  AFTER.welcome = ((orig) => () => {
+    orig();
+    if (location.hash.startsWith('#join-') && !view.autoJoined) { view.autoJoined = true; ACT.joinClass(); }
+  })(AFTER.welcome);
+
+  function screenDashboard() {
+    const c = classes.find((x) => x.id === view.c) || { id: view.c, name: 'Class' };
+    const list = view.students;
+    const rows = (list || []).map((st) => { let d = {}; try { d = JSON.parse(st.data || '{}'); } catch { /* empty */ } return { st, sum: summarize(d) }; });
+    const active = rows.filter((r) => r.sum.last === dayKey()).length;
+    const avgReady = rows.length ? Math.round(rows.reduce((a, r) => a + r.sum.ready, 0) / rows.length) : 0;
+    return `
+      <section class="sub-head s-mix"><button class="back" data-act="nav" data-to="players" aria-label="Back">←</button><span class="sub-ic">🏫</span><div><h1>${esc(c.name)}</h1><p>Class dashboard · code ${Cloud.prettyCode(c.id)}</p></div></section>
+      <div class="row"><button class="btn small" data-act="copyText" data-v="${esc(joinLink(c.id))}">Copy join link</button><button class="btn small" data-act="copyText" data-v="${Cloud.prettyCode(c.id)}">Copy code</button><button class="btn small ghost" data-act="refreshDash">↻ Refresh</button></div>
+      ${!list ? '<p class="muted card">Loading students…</p>' : view.err ? `<p class="pin-err card">${esc(view.err)}</p>` : !rows.length ? '<p class="card muted">No students yet. On a child\'s device, open the join link (or type the code) and tap "I\'m new here".</p>' : `
+      <section class="stats">
+        <div class="stat"><b>${rows.length}</b><span>Students</span></div>
+        <div class="stat"><b>${active}</b><span>Learned today</span></div>
+        <div class="stat"><b>${rows.reduce((a, r) => a + r.sum.week, 0)}</b><span>Questions this week</span></div>
+        <div class="stat"><b>${avgReady}%</b><span>Avg Grade 3 ready</span></div>
+      </section>
+      <section class="card dash-wrap"><div class="dash-scroll"><table class="dash">
+        <thead><tr><th>Student</th><th>Last active</th><th>XP</th><th>Quests</th><th>Streak</th><th>This week</th>${SUBJECTS.map((s) => `<th class="s-${s.color}">${s.name}</th>`).join('')}<th>Grade 3 ready</th><th>Needs practice</th><th></th></tr></thead>
+        <tbody>${rows.map(({ st, sum }) => `<tr>
+          <td><button class="link" data-act="openStudent" data-sid="${st.id}"><span class="av">${esc(st.avatar || '🦊')}</span> <b>${esc(st.name)}</b></button></td>
+          <td>${lastSeen(sum.last)}</td><td class="num">${sum.xp}</td><td class="num">${sum.quests}</td><td class="num">${sum.streak ? '🔥 ' + sum.streak : '–'}</td><td class="num">${sum.week} q</td>
+          ${SUBJECTS.map((s) => `<td class="s-${s.color}"><span class="meter mini"><i style="width:${sum.mastery[s.id]}%"></i></span><small>${sum.mastery[s.id]}%</small></td>`).join('')}
+          <td class="num"><b>${sum.ready}%</b></td>
+          <td>${sum.weak ? `${esc(sum.weak.k.name)} <small class="muted">${LEVEL_NAMES[sum.weak.l].short} · ${sum.weak.b}%</small>` : '<span class="muted">–</span>'}</td>
+          <td><button class="icon-btn mini" data-act="askRemoveStudent" data-sid="${st.id}" aria-label="Remove ${esc(st.name)}">🗑️</button></td>
+        </tr>`).join('')}</tbody></table></div></section>`}
+      <p class="fine">Mastery is the share of stars earned across all levels in that subject. Grade 3 ready is the share of skills whose Grade 3 Challenge is passed (70% or more).</p>`;
+  }
+  AFTER.dashboard = () => {
+    if (view.students || view.loading) return;
+    view.loading = true;
+    Cloud.listStudents(view.c, true).then((l) => { view.students = l; view.loading = false; if (view.name === 'dashboard') render(); })
+      .catch(() => { view.students = []; view.err = 'Could not load the class. Check the internet and try again.'; view.loading = false; if (view.name === 'dashboard') render(); });
+  };
+
+  function screenStudentView() {
+    const st = (view.students || []).find((x) => x.id === view.sid);
+    if (!st) return screenDashboard();
+    let d = {}; try { d = JSON.parse(st.data || '{}'); } catch { /* empty */ }
+    const body = withData(d, () => screenProgress(st.name, true));
+    const ws = (d.writings || []);
+    return `
+      <section class="sub-head s-mix"><button class="back" data-act="backToDash" aria-label="Back to dashboard">←</button><span class="sub-ic">${esc(st.avatar || '🦊')}</span><div><h1>${esc(st.name)}</h1><p>Last synced ${st.updatedAt ? new Date(st.updatedAt).toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' }) : 'never'}</p></div></section>
+      ${body}
+      <section class="card stack"><h2>Writing (${ws.length})</h2>${ws.length ? ws.map((w) => `<details class="wpiece"><summary><b>${esc(w.title)}</b> <span class="muted">${esc(w.date)} · ${'★'.repeat(w.stars || 0)}</span></summary><div class="paper-view">${esc(w.text)}</div></details>`).join('') : '<p class="muted">No published writing yet.</p>'}</section>`;
+  }
+
+  Object.assign(SCREENS, { classCreate: screenClassCreate, classPick: screenClassPick, dashboard: screenDashboard, studentView: screenStudentView });
+
+  async function signInStudent(c, st, data) {
+    const id = `c_${c.id}_${st.id}`;
+    let prof = profiles.find((p) => p.id === id);
+    if (!prof) { prof = { id, name: st.name, avatar: st.avatar || AVATARS[0], cloud: { classId: c.id, sid: st.id, className: c.name } }; profiles.push(prof); saveProfiles(); }
+    if (data) store.set('elaq_p_' + id, data);
+    loadProfile(id);
+    go('home');
+    await pull();
+  }
+
   // ---------- modals ----------
   function confirmModal(title, text, yesAct, yesLabel, data = '') {
     modal = `<h2>${esc(title)}</h2><p>${esc(text)}</p><div class="row end"><button class="btn ghost" data-act="closeModal">Cancel</button><button class="btn danger" data-act="${yesAct}" ${data}>${esc(yesLabel)}</button></div>`;
@@ -1122,7 +1406,7 @@
       go(profiles.length ? 'players' : 'home');
     },
     askReset: () => confirmModal(`Reset ${me().name}'s progress?`, 'Scores, XP, badges, and writing for this player will be erased. This cannot be undone.', 'resetMe', 'Reset progress'),
-    resetMe: () => { P = blankData(); save(); go('home'); },
+    resetMe: () => { P = blankData(); P.resetAt = Date.now(); save(); go('home'); },
     goal: (ds) => { settings.dailyGoal = +ds.n; saveSettings(); render(); },
 
     newWriting: (ds) => go('studioNew', { t: ds.t, lvl: Math.min(2, Math.max(0, ...[0, 1, 2].filter((l) => l === 0 || P.writings.filter((w) => w.lvl === l - 1 && w.stars >= 2).length > 0))) }),
@@ -1160,7 +1444,7 @@
       const selfN = Object.values(d.self || {}).filter(Boolean).length;
       const stars = ratio === 1 && selfN >= 3 ? 3 : ratio >= 0.7 ? 2 : 1;
       const title = ((document.getElementById('pubTitle') || {}).value || d.title || d.prompt).trim();
-      P.writings.unshift({ type: d.type, lvl: d.lvl, prompt: d.prompt, title, text: d.text.trim(), stars, date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) });
+      P.writings.unshift({ id: Math.random().toString(36).slice(2, 10), at: Date.now(), type: d.type, lvl: d.lvl, prompt: d.prompt, title, text: d.text.trim(), stars, date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }) });
       const xp = 30 + stars * 15;
       P.xp += xp;
       P.draft = null;
@@ -1181,7 +1465,108 @@
       try { navigator.clipboard.writeText(txt).then(() => { el.textContent = 'Copied'; }, () => { el.textContent = 'Select the text to copy'; }); } catch { el.textContent = 'Select the text to copy'; }
     },
     askDeleteWriting: (ds) => confirmModal('Delete this writing?', 'It will be removed from your bookshelf.', 'deleteWriting', 'Delete', `data-i="${ds.i}"`),
-    deleteWriting: (ds) => { P.writings.splice(+ds.i, 1); save(); go('studio'); },
+    deleteWriting: (ds) => { const [w] = P.writings.splice(+ds.i, 1); if (w) P.gone = [...(P.gone || []), w.id || `${w.date}|${w.title}`].slice(-400); save(); go('studio'); },
+  };
+
+  // ---------- class & sync actions ----------
+  const val = (id) => ((document.getElementById(id) || {}).value || '').trim();
+  Object.assign(ACT, {
+    joinClass: async () => {
+      const code = Cloud.cleanCode(val('joinCode') || view.code || (location.hash.startsWith('#join-') ? location.hash.slice(6) : ''));
+      view.code = code;
+      if (code.length !== 12) { view.joinErr = 'Class codes have 12 letters and numbers, like ABCD-EFGH-JKMN.'; render(); return; }
+      view.joinErr = 'Looking for the class…'; render();
+      try {
+        const c = await Cloud.getClass(code);
+        if (!c) { view.joinErr = 'No class has that code. Check it and try again.'; render(); return; }
+        rememberClass(c);
+        if (location.hash.startsWith('#join-')) history.replaceState(null, '', location.pathname);
+        go('classPick', { c: c.id });
+      } catch { view.joinErr = 'Could not reach the class. Check the internet and try again.'; render(); }
+    },
+    openClass: (ds) => go('classPick', { c: ds.c }),
+    pickMode: (ds) => { view.mode = ds.m; view.err = ''; render(); },
+    createClass: async () => {
+      const name = val('className'), p1 = val('adminPin'), p2 = val('adminPin2');
+      view.cname = name;
+      if (!name) { view.err = 'Give the class a name.'; render(); return; }
+      if (!/^\d{4,6}$/.test(p1)) { view.err = 'The grown-up PIN must be 4 to 6 digits.'; render(); return; }
+      if (p1 !== p2) { view.err = 'The two PINs do not match.'; render(); return; }
+      view.busy = true; view.err = ''; render();
+      try {
+        const c = await Cloud.createClass(name, p1);
+        rememberClass(c); adminOK.add(c.id);
+        view.busy = false; view.created = c; SFX.play('fanfare'); render();
+      } catch { view.busy = false; view.err = 'Could not create the class. Check the internet and try again.'; render(); }
+    },
+    pickStudent: (ds) => {
+      const st = view.students.find((x) => x.id === ds.sid), c = classes.find((x) => x.id === view.c);
+      const id = `c_${c.id}_${st.id}`;
+      askPin({ title: `Hi, ${st.name}!`, sub: 'Type your 4-digit PIN.', check: async (p) => (await Cloud.pinHash(c.id, st.id, p)) === st.pinHash, ok: () => signInStudent(c, st, profiles.some((x) => x.id === id) ? null : blankData()) });
+    },
+    createStudent: async () => {
+      const c = classes.find((x) => x.id === view.c);
+      const name = val('stuName'), p1 = val('stuPin'), p2 = val('stuPin2'), from = val('bringFrom');
+      view.typed = name;
+      if (!name) { view.err = 'Type your first name.'; render(); return; }
+      if ((view.students || []).some((s) => s.name.toLowerCase() === name.toLowerCase())) { view.err = `There is already a ${name} in this class. Add your last initial, like "${name} G."`; render(); return; }
+      if (!/^\d{4}$/.test(p1)) { view.err = 'Your PIN must be exactly 4 digits.'; render(); return; }
+      if (p1 !== p2) { view.err = 'The two PINs do not match.'; render(); return; }
+      const data = from ? Object.assign(blankData(), store.get('elaq_p_' + from, {})) : blankData();
+      const avatar = view.avatar || (from && (profiles.find((p) => p.id === from) || {}).avatar) || AVATARS[0];
+      view.busy = true; view.err = ''; render();
+      try {
+        const sid = await Cloud.createStudent(c.id, { name, avatar, pin: p1, data });
+        SFX.play('fanfare');
+        await signInStudent(c, { id: sid, name, avatar }, data);
+      } catch { view.busy = false; view.err = 'Could not join the class. Check the internet and try again.'; render(); }
+    },
+    pinKey: (ds) => { if (!pin) return; if (pin.entered.length < pin.max) pin.entered += ds.v; pin.err = ''; SFX.play('tap'); if (pin.max === pin.len && pin.entered.length === pin.len) { pinSubmit(); return; } modal = pinModal(); render(); },
+    pinBack: () => { if (!pin) return; pin.entered = pin.entered.slice(0, -1); modal = pinModal(); render(); },
+    pinGo: () => { if (pin && pin.entered.length >= pin.len) pinSubmit(); },
+    openDashboard: async (ds) => {
+      const cid = ds.c;
+      const open = () => go('dashboard', { c: cid });
+      if (adminOK.has(cid)) return open();
+      let c;
+      try { c = await Cloud.getClass(cid); } catch { modal = '<h2>Offline</h2><p>The dashboard needs the internet. Check the connection and try again.</p><div class="row end"><button class="btn primary" data-act="closeModal">OK</button></div>'; render(); return; }
+      if (!c) return;
+      askPin({ title: 'Grown-up PIN', sub: `Opens the dashboard for ${c.name}.`, len: 4, max: 6, check: async (p) => (await Cloud.adminHash(cid, p)) === c.adminHash, ok: () => { adminOK.add(cid); open(); } });
+    },
+    refreshDash: () => { view.students = null; view.err = ''; render(); },
+    openStudent: (ds) => go('studentView', { c: view.c, sid: ds.sid, students: view.students }),
+    backToDash: () => go('dashboard', { c: view.c, students: view.students }),
+    askRemoveStudent: (ds) => { const st = view.students.find((x) => x.id === ds.sid); confirmModal(`Remove ${st.name} from the class?`, `${st.name}'s progress and writing will be deleted from the class on every device. This cannot be undone.`, 'removeStudent', 'Remove student', `data-sid="${ds.sid}"`); },
+    removeStudent: async (ds) => {
+      try { await Cloud.deleteStudent(view.c, ds.sid); } catch { modal = '<h2>Could not remove</h2><p>Check the internet and try again.</p><div class="row end"><button class="btn primary" data-act="closeModal">OK</button></div>'; render(); return; }
+      view.students = view.students.filter((x) => x.id !== ds.sid);
+      const local = profiles.find((p) => p.cloud && p.cloud.sid === ds.sid);
+      modal = null;
+      if (local) studentRemoved(local); else render();
+    },
+    copyText: (ds, el) => {
+      const done = (t) => { const o = el.textContent; el.textContent = t; setTimeout(() => { el.textContent = o; }, 1600); };
+      try { navigator.clipboard.writeText(ds.v).then(() => done('Copied ✓'), () => done(ds.v)); } catch { done(ds.v); }
+    },
+    leaveClass: (ds) => confirmModal('Forget this class on this device?', 'Students from this class will be signed out here. Their progress stays safe in the class.', 'forgetClass', 'Forget class', `data-c="${ds.c}"`),
+    forgetClass: (ds) => {
+      profiles.filter((p) => p.cloud && p.cloud.classId === ds.c).forEach((p) => store.del('elaq_p_' + p.id));
+      profiles = profiles.filter((p) => !(p.cloud && p.cloud.classId === ds.c)); saveProfiles();
+      classes = classes.filter((c) => c.id !== ds.c); saveClasses();
+      if (!profiles.some((p) => p.id === activeId)) { if (profiles.length) loadProfile(profiles[0].id); else { P = null; activeId = null; store.del('elaq_active'); } }
+      go(profiles.length ? 'players' : 'welcome');
+    },
+  });
+  // Switching to a class student on a shared device always asks for their PIN.
+  const plainSwitch = ACT.switchPlayer;
+  ACT.switchPlayer = (ds) => {
+    const p = profiles.find((x) => x.id === ds.id);
+    if (!p || !p.cloud || p.id === activeId) return plainSwitch(ds);
+    askPin({
+      title: `Hi, ${p.name}!`, sub: 'Type your 4-digit PIN.',
+      check: async (pinIn) => { const st = await Cloud.getStudent(p.cloud.classId, p.cloud.sid); if (!st) return false; return (await Cloud.pinHash(p.cloud.classId, p.cloud.sid, pinIn)) === st.pinHash; },
+      ok: () => { loadProfile(p.id); go('home'); pull(); },
+    });
   };
 
   let audioPrimed = false;
@@ -1212,6 +1597,7 @@
   if (activeId && profiles.some((p) => p.id === activeId)) loadProfile(activeId);
   else if (profiles.length) loadProfile(profiles[0].id);
   render();
+  if (me() && me().cloud) pull();
 
   if ('serviceWorker' in navigator && location.protocol.startsWith('http') && !window.ELAQ_NO_SW) {
     navigator.serviceWorker.register('sw.js').catch(() => {});
