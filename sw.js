@@ -1,4 +1,4 @@
-const CACHE = "elaquest-v8";
+const CACHE = "elaquest-v9";
 const ASSETS = [
   "./",
   "./index.html",

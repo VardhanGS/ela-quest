@@ -904,6 +904,11 @@
   function screenSettings() {
     return `
       <h1 class="page-h">Settings</h1>
+      <section class="card stack hub-link">
+        <h2>🧭 All family apps</h2>
+        <p class="fine">ELA Quest, math, reading, and test practice are all in the Learning Hub.</p>
+        <a class="btn" href="../learning-hub/">Open the Learning Hub</a>
+      </section>
       <section class="card stack">
         <h2>Listening</h2>
         <p class="fine">Questions, lessons, and stories use a natural recorded voice${Voice.clipCount() ? ` (${Voice.clipCount().toLocaleString()} lines)` : ''}. Your own writing is read by this device's built-in voice.</p>
